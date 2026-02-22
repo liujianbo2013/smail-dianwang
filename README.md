@@ -99,5 +99,16 @@
 - 移动端优化：缩小按钮尺寸、横向滚动工具栏、适配全屏触摸操作；
 - 视觉反馈：不同状态的建筑/电线有专属颜色（如供电的房子为绿色，过载电线为橙色），便于快速识别问题。
 
-## 欢迎大家创建PR为这个游戏添砖加瓦！
-- 点击 [这里](https://github.com/liujianbo2013/smail-dianwang/fork) fork这个项目，然后修改代码，就可以提交啦！
+## 五、欢迎大家创建PR为这个游戏添砖加瓦！
+
+### 修改代码
+- 点击 [这里](https://github.com/liujianbo2013/smail-dianwang/fork) fork这个项目，然后修改代码，就可以提交代码啦！
+
+### 提出建议
+
+- 点击 [这里](https://github.com/liujianbo2013/smail-dianwang/issues/new) 就可以提交提议啦。
+
+## 六、待办事项
+- [ ] 增加更多玩法
+- [ ] 增加存档保存、读取功能
+- [ ] 增加分享功能
