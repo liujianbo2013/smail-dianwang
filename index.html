@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Grid: Drag & Drop</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+ 
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+ 
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Share Tech Mono', monospace;
+            color: #fff;
+            user-select: none;
+            -webkit-user-select: none;
+            display: flex;
+            flex-direction: column;
+        }
+ 
+        /* 全屏模式样式 */
+        :fullscreen {
+            background-color: #000;
+        }
+         
+        :-webkit-full-screen {
+            background-color: #000;
+        }
+         
+        :-moz-full-screen {
+            background-color: #000;
+        }
+         
+        :-ms-fullscreen {
+            background-color: #000;
+        }
+ 
+        /* --- 顶部面板 --- */
+        #top-panel {
+            background: linear-gradient(to bottom, #0a0a12, #05050a);
+            border-bottom: 2px solid #00ffff;
+            display: flex;
+            align-items: center;
+            padding: 8px 15px;
+            z-index: 20;
+            box-shadow: 0 2px 20px rgba(0,255,255,0.2);
+            min-height: 50px;
+            flex-shrink: 0;
+        }
+ 
+        /* 系统消息 */
+        #system-msg {
+            flex: 1;
+            background: rgba(0, 20, 20, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 13px;
+            border-radius: 17px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            box-shadow: inset 0 0 20px rgba(0,255,255,0.1);
+            transition: all 0.3s ease;
+            margin-right: 15px;
+        }
+         
+        #system-msg.highlight {
+            color: #fff;
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+ 
+        #system-msg.warning {
+            color: #ff6666;
+            border-color: #ff3333;
+            background: rgba(255, 0, 0, 0.2);
+        }
+ 
+        #system-msg.success {
+            color: #00ff88;
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.2);
+        }
+ 
+        /* 统计信息 */
+        .stats-group {
+            display: flex;
+            gap: 12px;
+        }
+ 
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 50, 60, 0.3);
+            padding: 3px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+ 
+        .stat-label {
+            font-size: 9px;
+            color: #6688aa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+ 
+        .stat-value {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+ 
+        /* --- 游戏容器 --- */
+        #game-container {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #0a0a15 0%, #020205 100%);
+            overflow: hidden;
+            width: 100%;
+        }
+ 
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            touch-action: none;
+        }
+ 
+        /* 视图控制按钮 */
+        .view-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 15;
+        }
+ 
+        .view-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 20, 30, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            font-size: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            font-family: Arial, sans-serif;
+        }
+ 
+        .view-btn:hover, .view-btn:active {
+            background: rgba(0, 255, 255, 0.2);
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+         
+        #fullscreen-btn.active {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: #00ffff;
+            color: #fff;
+        }
+ 
+        #alarm-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0);
+            transition: box-shadow 0.3s ease;
+            z-index: 10;
+        }
+         
+        #alarm-overlay.active {
+            box-shadow: inset 0 0 150px 80px rgba(255, 0, 0, 0.6);
+            animation: alarmPulse 1s ease-in-out infinite;
+        }
+ 
+        @keyframes alarmPulse {
+            0%, 100% { box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0.4); }
+            50% { box-shadow: inset 0 0 200px 100px rgba(255, 0, 0, 0.7); }
+        }
+ 
+        /* --- 底部面板 --- */
+        #bottom-panel {
+            background: linear-gradient(to top, #0a0a12, #05050a);
+            border-top: 2px solid rgba(0, 255, 255, 0.3);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            flex-shrink: 0;
+            box-shadow: 0 -2px 20px rgba(0,0,0,0.5);
+        }
+ 
+        /* 建筑工具栏 */
+        .buildings-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex: 1;
+        }
+ 
+        /* 可拖拽的建筑按钮 */
+        .building-btn {
+            background: linear-gradient(135deg, rgba(20, 30, 40, 0.9), rgba(10, 20, 30, 0.9));
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            color: #6699aa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            padding: 10px 15px;
+            min-width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+ 
+        .building-btn:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 255, 0.05));
+            border-color: #00ffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.3);
+        }
+ 
+        .building-btn.active {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.1));
+            border-color: #00ffff;
+            color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+ 
+        .building-btn span.icon { 
+            font-size: 24px; 
+            margin-bottom: 4px;
+        }
+ 
+        .building-btn span.label { 
+            font-size: 11px; 
+            font-weight: bold; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+ 
+        .building-btn span.price { 
+            font-size: 9px; 
+            color: #556677; 
+            margin-top: 2px;
+        }
+ 
+        /* 特殊建筑样式 */
+        .building-btn.nuclear {
+            border-color: rgba(0, 255, 102, 0.3);
+        }
+ 
+        .building-btn.nuclear:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 102, 0.1), rgba(0, 255, 102, 0.05));
+            border-color: #00ff66;
+            box-shadow: 0 4px 20px rgba(0, 255, 102, 0.3);
+        }
+ 
+        .building-btn.battery {
+            border-color: rgba(0, 255, 0, 0.3);
+        }
+ 
+        .building-btn.battery:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 0, 0.1), rgba(0, 255, 0, 0.05));
+            border-color: #00ff00;
+            box-shadow: 0 4px 20px rgba(0, 255, 0, 0.3);
+        }
+ 
+        /* 速度控制 */
+        .speed-controls {
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 20, 30, 0.5);
+            padding: 4px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+ 
+        .speed-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #6699aa;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 15px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+ 
+        .speed-btn:hover {
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+        }
+         
+        .speed-btn.active {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+        }
+ 
+        /* 拖拽预览 */
+        .drag-preview {
+            position: fixed;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0.8;
+            transform: translate(-50%, -50%);
+        }
+ 
+        /* 帮助提示 */
+        .help-tip {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            color: #00ffff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 25;
+            text-align: center;
+            max-width: 300px;
+        }
+ 
+        .help-tip.show {
+            opacity: 1;
+        }
+ 
+        /* 游戏结束画面 */
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(10px);
+        }
+ 
+        #game-over.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+ 
+        #game-over h2 {
+            font-size: 36px;
+            color: #ff3333;
+            margin: 0 0 10px 0;
+            letter-spacing: 5px;
+            text-align: center;
+            text-shadow: 0 0 30px #ff0000;
+        }
+ 
+        .restart-btn {
+            margin-top: 20px;
+            background: transparent;
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 12px 40px;
+            font-size: 18px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+ 
+        .restart-btn:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+ 
+ 
+ 
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            #top-panel { 
+                padding: 5px 10px; 
+                min-height: 45px;
+            }
+             
+            #system-msg { 
+                font-size: 11px; 
+                height: 30px;
+                margin-right: 10px;
+            }
+             
+            .stats-group { 
+                gap: 8px; 
+            }
+             
+            .stat-item { 
+                padding: 2px 8px; 
+            }
+             
+            .stat-label { 
+                font-size: 8px; 
+            }
+             
+            .stat-value { 
+                font-size: 12px; 
+            }
+             
+            #bottom-panel { 
+                padding: 8px; 
+            }
+             
+            .building-btn {
+                min-width: 65px;
+                padding: 8px 10px;
+            }
+             
+            .building-btn span.icon { 
+                font-size: 20px; 
+            }
+             
+            .building-btn span.label { 
+                font-size: 9px; 
+            }
+             
+            .building-btn span.price { 
+                font-size: 8px; 
+            }
+             
+            .view-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+             
+            .buildings-toolbar { 
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+             
+            .buildings-toolbar::-webkit-scrollbar { 
+                display: none; 
+            }
+ 
+ 
+        }
+    </style>
+</head>
+<body>
+ 
+    <header id="top-panel">
+        <div id="system-msg">系统就绪 - 点击建筑按钮放置</div>
+        <div class="stats-group">
+            <div class="stat-item">
+                <span class="stat-label">资金</span>
+                <span class="stat-value" id="money-display" style="color: #ffd700;">$200</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">收入</span>
+                <span class="stat-value" id="income-display">+$0/s</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">覆盖</span>
+                <span class="stat-value" id="coverage-display">0%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">人口</span>
+                <span class="stat-value" id="scale-display">0</span>
+            </div>
+        </div>
+    </header>
+ 
+    <div id="game-container">
+        <div id="alarm-overlay"></div>
+         
+ 
+         
+        <!-- 视图控制按钮 -->
+        <div class="view-controls">
+            <button class="view-btn" onclick="toggleFullscreen()" title="全屏" id="fullscreen-btn">⛶</button>
+            <button class="view-btn" onclick="zoomIn()" title="放大">+</button>
+            <button class="view-btn" onclick="zoomOut()" title="缩小">-</button>
+            <button class="view-btn" onclick="resetView()" title="重置视图">⊙</button>
+        </div>
+         
+        <!-- 帮助提示 -->
+        <div id="help-tip" class="help-tip"></div>
+         
+        <div id="game-over">
+            <h2 id="game-over-title">系统故障 | SYSTEM FAILURE</h2>
+            <p id="game-over-reason" style="color: #88aaff; text-align: center; padding: 0 20px;">电网过载检测。</p>
+            <div id="replay-container" style="margin: 20px 0; border: 2px solid #334444; background: #000; position: relative;">
+                <div style="position: absolute; top: 10px; left: 10px; color: #00ffff; font-size: 12px; background: rgba(0,0,0,0.5); padding: 2px 5px;">时间回放</div>
+                <canvas id="replayCanvas" width="400" height="250"></canvas>
+            </div>
+            <div class="slider-container" style="width: 400px; margin: 10px 0; display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="replay-slider" min="0" max="100" value="0" style="-webkit-appearance: none; width: 100%; height: 6px; background: #334455; outline: none; border-radius: 3px;">
+            </div>
+            <button class="restart-btn" onclick="restartGame()">重启系统</button>
+        </div>
+         
+        <canvas id="gameCanvas"></canvas>
+    </div>
+ 
+    <footer id="bottom-panel">
+        <div class="buildings-toolbar">
+            <div class="building-btn" data-type="plant" onclick="enterPlacementMode('plant')">
+                <span class="icon">🏭</span>
+                <span class="label">电厂</span>
+                <span class="price">$1500</span>
+            </div>
+            <div class="building-btn nuclear" data-type="nuclear" onclick="enterPlacementMode('nuclear')">
+                <span class="icon">☢️</span>
+                <span class="label">核电站</span>
+                <span class="price">$6000</span>
+            </div>
+            <div class="building-btn battery" data-type="battery" onclick="enterPlacementMode('battery')">
+                <span class="icon">🔋</span>
+                <span class="label">电池</span>
+                <span class="price">$800</span>
+            </div>
+        </div>
+        <div class="speed-controls">
+            <button class="speed-btn" onclick="setTimeScale(0)">⏸</button>
+            <button class="speed-btn" onclick="setTimeScale(0.5)">.5x</button>
+            <button class="speed-btn active" onclick="setTimeScale(1)">1x</button>
+            <button class="speed-btn" onclick="setTimeScale(2)">2x</button>
+        </div>
+    </footer>
+ 
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const container = document.getElementById('game-container');
+        const ctx = canvas.getContext('2d', { alpha: false }); 
+        const sysMsgEl = document.getElementById('system-msg');
+        const alarmOverlay = document.getElementById('alarm-overlay');
+        const helpTip = document.getElementById('help-tip');
+         
+        // Replay Canvas & UI
+        const replayCanvas = document.getElementById('replayCanvas');
+        const replayCtx = replayCanvas.getContext('2d');
+        const replaySlider = document.getElementById('replay-slider');
+ 
+        // Prevent Context Menu on Canvas
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+ 
+        // --- Game Constants & Config ---
+        const CONFIG = {
+            initialMoney: 200, 
+            baseSubsidy: 25,     
+            incomePerHouse: 1,  
+             
+            // Factory Settings (FIXED INTERVALS)
+            factoryUnlockPop: 30, 
+            factorySpawnRate: 90000, // 1 minute 30 seconds
+            factoryLoad: 5,
+            incomePerFactory: 8,
+ 
+            // Commercial Settings (FIXED INTERVALS)
+            commUnlockPop: 60, 
+            commSpawnRate: 45000, // 45 seconds (Half of 90s)
+            commBaseLoad: 2,
+            commPeakLoad: 3, 
+            incomePerComm: 5,
+ 
+            // Battery Settings
+            costBattery: 800,
+            batteryCapacity: 500,
+            batteryChargeRate: 4.0, 
+            batteryDischargeRate: 6.0,
+ 
+            upkeepPerPlant: 10, 
+            economyTickRate: 1000, 
+            refundRate: 0.1, 
+             
+            costPylon: 10,            
+            costPlant: 1500,
+             
+            // Nuclear Settings
+            costNuclear: 6000,
+            nuclearCapacity: 60,
+            nuclearUpkeep: 50,
+             
+            costWirePerUnit: 0.1,
+            costUpgradeMult: 6.0, 
+            baseWireLoad: 5,
+            upgradedWireLoad: 15,
+             
+            maxWireLength: 300, 
+            snapDistance: 40,   
+            minEntityDist: 60,
+             
+            plantCapacity: 15,        
+            overheatSpeed: 0.05, 
+            maxHeat: 100,        
+             
+            initialScale: 1.2,    
+            minScale: 0.1,
+            maxScale: 3.0,
+            viewExpansionRate: 0.003, 
+            spawnRate: 8000, // Initial House Spawn Rate
+            houseMaxPatience: 3500, 
+            maxAngryHouses: 1, // HARDCORE: 1 strike fail
+             
+            colors: {
+                bg: '#020205',
+                grid: '#0d0d1a',
+                powerOn: '#00ffff',
+                powerOff: '#333344',
+                powerSource: '#ffffff',
+                nuclearSource: '#00ff66',
+                houseAngry: '#ff2a2a',
+                houseHappy: '#00ffaa',
+                houseOff: '#004433', 
+                 
+                factory: '#ff8800', 
+                factoryHappy: '#ffe600',
+                factoryOff: '#442200', 
+                 
+                comm: '#0088ff',
+                commHappy: '#00ccff',
+                commOff: '#002244', 
+                 
+                battery: '#00ff00',
+                batteryDraining: '#ffaa00',
+                wire: '#1a1a26',
+                wireUpgraded: '#d000ff', 
+                wireUpgradedGlow: '#e055ff',
+                wireOverload: '#ffaa00',
+                wireDanger: '#ff0000',
+                dragLineValid: '#00ffff',
+                dragLineInvalid: '#ff3333',
+                deleteHighlight: '#ff3333',
+                upgradeHighlight: '#d000ff',
+                nuclearHighlight: '#00ff66',
+                plantOverload: '#ff0000',
+                refundText: '#00ff88'
+            }
+        };
+ 
+        // --- State ---
+        let width, height; 
+        let cx, cy; 
+        let viewOffsetX = 0, viewOffsetY = 0;
+        let lastTime = 0;
+        let gameOver = false;
+        let money = CONFIG.initialMoney;
+        let currentNetIncome = 0;
+        let timeScale = 1.0;
+        let gameTime = 0; 
+         
+        let input = { x: 0, y: 0, worldX: 0, worldY: 0, isDown: false, isRightDown: false };
+        let dragStartNode = null; 
+        let snapTarget = null; 
+        let validBuildPos = true; 
+        let isIntersecting = false; 
+        let hoveredLink = null; 
+        let hoveredEntity = null;
+        let currentScale = CONFIG.initialScale;
+        let totalSpawns = 0;
+        let isCriticalState = false;
+        let isHighVoltageMode = false; // Shift键高压模式
+ 
+        // 建筑放置相关
+        let placementMode = null; // 当前放置模式: null | 'plant' | 'nuclear' | 'battery'
+        let draggedType = null;   // 仅用于旧的拖拽功能（保留用于兼容）
+        let dragPreview = null;
+ 
+        // 触摸手势支持
+        let touchStartDist = 0;
+        let lastTouchX = 0, lastTouchY = 0;
+        let isPanning = false;
+        let isZooming = false;
+ 
+        let sources = [];
+        let pylons = [];
+        let houses = []; 
+        let batteries = []; 
+        let particles = [];
+        let links = []; 
+ 
+        // Replay History
+        let gameHistory = [];
+        let lastSnapshotTime = 0;
+ 
+        let lastSpawnGameTime = 0;
+        let lastFactorySpawnTime = 0;
+        let lastCommSpawnTime = 0;
+        let lastIncomeGameTime = 0;
+         
+        let msgState = { text: "系统就绪 - 拖拽建筑到地图上", type: "normal", priority: 0, eventTimer: 0 };
+        let lastRenderedMsg = "";
+ 
+        // UI Elements
+        const moneyEl = document.getElementById('money-display');
+        const incomeEl = document.getElementById('income-display');
+        const coverageEl = document.getElementById('coverage-display');
+        const scaleEl = document.getElementById('scale-display');
+        const gameOverScreen = document.getElementById('game-over');
+        const gameOverReason = document.getElementById('game-over-reason');
+        const speedBtns = document.querySelectorAll('.speed-btn');
+ 
+        // --- 视图控制函数 ---
+        function zoomIn() {
+            currentScale = Math.min(currentScale * 1.2, CONFIG.maxScale);
+            showHelpTip("放大视图");
+        }
+ 
+        function zoomOut() {
+            currentScale = Math.max(currentScale / 1.2, CONFIG.minScale);
+            showHelpTip("缩小视图");
+        }
+ 
+        function resetView() {
+            currentScale = CONFIG.initialScale;
+            viewOffsetX = 0;
+            viewOffsetY = 0;
+            showHelpTip("视图已重置");
+        }
+ 
+        function showHelpTip(text, duration = 2000) {
+            helpTip.textContent = text;
+            helpTip.classList.add('show');
+            setTimeout(() => helpTip.classList.remove('show'), duration);
+        }
+ 
+        // --- 全屏模式功能 ---
+        let isFullscreen = false;
+ 
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+                !document.mozFullScreenElement && !document.msFullscreenElement) {
+                // 进入全屏
+                enterFullscreen();
+            } else {
+                // 退出全屏
+                exitFullscreen();
+            }
+        }
+ 
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        }
+ 
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+ 
+        function updateFullscreenButton() {
+            const btn = document.getElementById('fullscreen-btn');
+            if (isFullscreen) {
+                btn.innerHTML = '◱';
+                btn.title = '退出全屏';
+                btn.classList.add('active');
+            } else {
+                btn.innerHTML = '⛶';
+                btn.title = '全屏';
+                btn.classList.remove('active');
+            }
+        }
+ 
+        // 监听全屏变化事件
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+ 
+        function handleFullscreenChange() {
+            isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || 
+                             document.mozFullScreenElement || document.msFullscreenElement);
+            updateFullscreenButton();
+            resize();
+            if (isFullscreen) {
+                showHelpTip("已进入全屏模式 (按 ESC 退出)");
+            } else {
+                showHelpTip("已退出全屏模式");
+            }
+        }
+ 
+        // 进入建筑放置模式
+        function enterPlacementMode(type) {
+            placementMode = type;
+            // 更新按钮状态
+            document.querySelectorAll('.building-btn').forEach(btn => {
+                if (btn.getAttribute('data-type') === type) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+             
+            // 显示提示信息
+            let buildingName = '';
+            let cost = 0;
+            if (type === 'plant') { buildingName = '电厂'; cost = CONFIG.costPlant; }
+            else if (type === 'nuclear') { buildingName = '核电站'; cost = CONFIG.costNuclear; }
+            else if (type === 'battery') { buildingName = '电池'; cost = CONFIG.costBattery; }
+             
+            setSystemMsg(`放置${buildingName}模式 - 左键确认，右键取消`, "highlight");
+            showHelpTip(`点击地图放置${buildingName} ($${cost})`);
+        }
+ 
+        // 退出建筑放置模式
+        function exitPlacementMode() {
+            placementMode = null;
+            document.querySelectorAll('.building-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            clearSystemMsg();
+            showHelpTip("已切换到电线模式");
+        }
+ 
+        // --- View Culling Helpers ---
+        let viewBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+         
+        function updateViewBounds() {
+            const margin = 100; 
+            viewBounds.minX = (0 - cx - viewOffsetX) / currentScale - margin;
+            viewBounds.maxX = (width - cx - viewOffsetX) / currentScale + margin;
+            viewBounds.minY = (0 - cy - viewOffsetY) / currentScale - margin;
+            viewBounds.maxY = (height - cy - viewOffsetY) / currentScale + margin;
+        }
+ 
+        function isInView(x, y, radius = 0) {
+            return x + radius > viewBounds.minX && 
+                   x - radius < viewBounds.maxX && 
+                   y + radius > viewBounds.minY && 
+                   y - radius < viewBounds.maxY;
+        }
+ 
+        function isLinkInView(l) {
+            const minX = Math.min(l.from.x, l.to.x);
+            const maxX = Math.max(l.from.x, l.to.x);
+            const minY = Math.min(l.from.y, l.to.y);
+            const maxY = Math.max(l.from.y, l.to.y);
+            return maxX > viewBounds.minX && 
+                   minX < viewBounds.maxX && 
+                   maxY > viewBounds.minY && 
+                   minY < viewBounds.maxY;
+        }
+ 
+        // --- Replay System ---
+        function takeSnapshot() {
+            const frame = {
+                entities: [],
+                links: [],
+                scale: currentScale
+            };
+             
+            const allEntities = [...sources, ...pylons, ...houses, ...batteries];
+            allEntities.forEach(e => {
+                let colorCode = 0;
+                if (e.variant === 'nuclear') colorCode = 7;
+                else if (e.type === 'source') colorCode = 3;
+                else if (e.type === 'factory') colorCode = 4;
+                else if (e.type === 'commercial') colorCode = 5;
+                else if (e.type === 'battery') colorCode = 6;
+                else if (e.isCritical) colorCode = 2;
+                else if (e.powered) colorCode = 1;
+                else colorCode = 0;
+                 
+                frame.entities.push({
+                    x: Math.round(e.x),
+                    y: Math.round(e.y),
+                    t: e.type.charAt(0),
+                    c: colorCode
+                });
+            });
+ 
+            links.forEach(l => {
+                frame.links.push({
+                    x1: Math.round(l.from.x),
+                    y1: Math.round(l.from.y),
+                    x2: Math.round(l.to.x),
+                    y2: Math.round(l.to.y),
+                    u: l.upgraded ? 1 : 0
+                });
+            });
+             
+            gameHistory.push(frame);
+        }
+ 
+        function renderReplayFrame(frameIndex) {
+            if (gameHistory.length === 0) return;
+            const idx = Math.min(Math.max(0, frameIndex), gameHistory.length - 1);
+            const frame = gameHistory[idx];
+             
+            const rctx = replayCtx;
+            const rw = replayCanvas.width;
+            const rh = replayCanvas.height;
+             
+            rctx.fillStyle = '#000';
+            rctx.fillRect(0, 0, rw, rh);
+             
+            const thumbScale = (rw / width) * frame.scale * 0.8;
+             
+            rctx.save();
+            rctx.translate(rw/2, rh/2);
+            rctx.scale(thumbScale, thumbScale);
+             
+            // Draw Links
+            rctx.lineWidth = 10 / frame.scale; 
+            frame.links.forEach(l => {
+                rctx.beginPath();
+                rctx.moveTo(l.x1, l.y1);
+                rctx.lineTo(l.x2, l.y2);
+                rctx.strokeStyle = l.u ? '#d000ff' : '#334455';
+                rctx.stroke();
+            });
+ 
+            // Draw Entities
+            frame.entities.forEach(e => {
+                let color = '#333';
+                let size = 20 / frame.scale;
+                 
+                if (e.c === 7) { color = '#00ff66'; size *= 1.8; }
+                else if (e.c === 3) { color = '#fff'; size *= 1.5; }
+                else if (e.c === 4) { color = '#ff8800'; size *= 1.2; }
+                else if (e.c === 5) { color = '#0088ff'; size *= 1.2; }
+                else if (e.c === 6) { color = '#00ff00'; size *= 1.0; }
+                else if (e.c === 2) color = '#ff0000';
+                else if (e.c === 1) color = '#00ffaa';
+                else if (e.c === 0) {
+                    if (e.t === 'h') color = '#004433';
+                    if (e.t === 'f') color = '#442200';
+                    if (e.t === 'c') color = '#002244';
+                }
+                 
+                rctx.fillStyle = color;
+                 
+                if (e.t === 's' || e.t === 'h') {
+                    rctx.beginPath(); rctx.arc(e.x, e.y, size, 0, Math.PI*2); rctx.fill();
+                } else if (e.t === 'p') {
+                    rctx.beginPath(); rctx.arc(e.x, e.y, size*0.5, 0, Math.PI*2); rctx.fill();
+                } else {
+                    rctx.fillRect(e.x - size, e.y - size, size*2, size*2);
+                }
+            });
+             
+            rctx.restore();
+        }
+ 
+        replaySlider.addEventListener('input', function() {
+            renderReplayFrame(parseInt(this.value));
+        });
+ 
+        // --- Message System ---
+        function setSystemMsg(text, type = "normal", isEvent = false) {
+            if (isEvent) {
+                msgState.text = text; msgState.type = type; msgState.priority = 2; msgState.eventTimer = 120;
+            } else if (msgState.priority < 2) {
+                msgState.text = text; msgState.type = type; msgState.priority = 1;
+            }
+        }
+         
+        function clearSystemMsg(force = false) {
+            if (force || msgState.priority < 2) {
+                msgState.text = "系统就绪 - 点击建筑按钮放置"; msgState.type = "normal"; msgState.priority = 0;
+            }
+        }
+         
+        function updateSystemUI() {
+            if (msgState.priority === 2) {
+                msgState.eventTimer--;
+                if (msgState.eventTimer <= 0) { msgState.priority = 0; setSystemMsg("系统就绪 - 点击建筑按钮放置", "normal"); }
+            }
+            const combinedState = msgState.text + msgState.type;
+            if (combinedState !== lastRenderedMsg) {
+                sysMsgEl.innerText = msgState.text;
+                sysMsgEl.className = "";
+                if (msgState.type !== "normal") sysMsgEl.classList.add(msgState.type);
+                lastRenderedMsg = combinedState;
+            }
+             
+            if (isCriticalState) {
+                if (!alarmOverlay.classList.contains('active')) alarmOverlay.classList.add('active');
+            } else {
+                if (alarmOverlay.classList.contains('active')) alarmOverlay.classList.remove('active');
+            }
+        }
+ 
+        // --- Initialization ---
+        function resize() {
+            const rect = container.getBoundingClientRect();
+            width = rect.width; height = rect.height;
+            canvas.width = width; canvas.height = height;
+            cx = width / 2; cy = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+ 
+        function restartGame() {
+            gameOver = false; money = CONFIG.initialMoney; currentNetIncome = 0;
+            sources = []; pylons = []; houses = []; batteries = []; links = []; particles = [];
+            totalSpawns = 0; currentScale = CONFIG.initialScale;
+            dragStartNode = null; snapTarget = null; CONFIG.maxAngryHouses = 5;
+            gameTime = 0; 
+            viewOffsetX = 0; viewOffsetY = 0;
+            placementMode = null; // 重置放置模式
+             
+            lastSpawnGameTime = 0;
+            lastFactorySpawnTime = 0;
+            lastCommSpawnTime = 0;
+            lastIncomeGameTime = 0;
+             
+            gameHistory = [];
+            lastSnapshotTime = 0;
+             
+            isCriticalState = false;
+            gameOverScreen.classList.remove('active');
+             
+            // 重置按钮状态
+            document.querySelectorAll('.building-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+             
+            sources.push({ 
+                x: 0, y: 0, radius: 25, type: 'source', id: Math.random(), 
+                load: 0, heat: 0, capacity: CONFIG.plantCapacity, 
+                spawnScale: 0, displayLoad: 0, rotation: 0, variant: 'standard'
+            });
+             
+            currentNetIncome = CONFIG.baseSubsidy - (sources.length * CONFIG.upkeepPerPlant);
+            spawnEntity('house');
+            updatePowerGrid(true); updateUI();
+            takeSnapshot();
+            setSystemMsg("系统已重启 - 点击建筑按钮放置", "success", true);
+        }
+ 
+        function setTimeScale(scale) {
+            timeScale = scale;
+            speedBtns.forEach(btn => btn.classList.remove('active'));
+            if (scale === 0) speedBtns[0].classList.add('active');
+            else if (scale === 0.5) speedBtns[1].classList.add('active');
+            else if (scale === 1.0) speedBtns[2].classList.add('active');
+            else if (scale === 2.0) speedBtns[3].classList.add('active');
+             
+            showHelpTip(`速度: ${scale === 0 ? '暂停' : scale + 'x'}`);
+        }
+ 
+        function toWorld(screenX, screenY) {
+            return { 
+                x: (screenX - cx - viewOffsetX) / currentScale, 
+                y: (screenY - cy - viewOffsetY) / currentScale 
+            };
+        }
+ 
+        // --- Helper Functions ---
+        function getEntityAt(worldX, worldY, radius = 30) {
+            for (let s of sources) if (Math.hypot(worldX - s.x, worldY - s.y) < radius) return s;
+            for (let p of pylons) if (Math.hypot(worldX - p.x, worldY - p.y) < radius) return p;
+            for (let b of batteries) if (Math.hypot(worldX - b.x, worldY - b.y) < radius) return b;
+            for (let h of houses) if (Math.hypot(worldX - h.x, worldY - h.y) < radius) return h;
+            return null;
+        }
+ 
+        function distToSegment(p, v, w) {
+            const l2 = (w.x - v.x)**2 + (w.y - v.y)**2;
+            if (l2 == 0) return Math.hypot(p.x - v.x, p.y - v.y);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+        }
+ 
+        function getLinkAt(x, y, tolerance = 15) {
+            const p = {x, y};
+            for (let l of links) {
+                if (distToSegment(p, l.from, l.to) < tolerance) return l;
+            }
+            return null;
+        }
+ 
+        function isPositionClear(worldX, worldY, buffer) {
+            for (let s of sources) if (Math.hypot(worldX - s.x, worldY - s.y) < buffer) return false;
+            for (let p of pylons) if (Math.hypot(worldX - p.x, worldY - p.y) < buffer) return false;
+            for (let b of batteries) if (Math.hypot(worldX - b.x, worldY - b.y) < buffer) return false;
+            for (let h of houses) if (Math.hypot(worldX - h.x, worldY - h.y) < buffer) return false;
+            return true;
+        }
+ 
+        function getLineIntersection(p1, p2, p3, p4) {
+            const det = (p2.x - p1.x) * (p4.y - p3.y) - (p4.x - p3.x) * (p2.y - p1.y);
+            if (det === 0) return false; 
+            const lambda = ((p4.y - p3.y) * (p4.x - p1.x) + (p3.x - p4.x) * (p4.y - p1.y)) / det;
+            const gamma = ((p1.y - p2.y) * (p4.x - p1.x) + (p2.x - p1.x) * (p4.y - p1.y)) / det;
+            return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+        }
+ 
+        function checkIntersection(startPos, endPos) {
+            for (let l of links) {
+                if (l.from === dragStartNode || l.to === dragStartNode || l.from === snapTarget || l.to === snapTarget) continue;
+                if (getLineIntersection(startPos, endPos, l.from, l.to)) return true;
+            }
+            return false;
+        }
+ 
+        // --- 建筑按钮触摸支持 ---
+        function setupBuildingButtons() {
+            const buildingBtns = document.querySelectorAll('.building-btn');
+             
+            buildingBtns.forEach(btn => {
+                // 移动端触摸点击
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const type = btn.getAttribute('data-type');
+                    enterPlacementMode(type);
+                });
+            });
+        }
+ 
+        function placeBuildingAt(worldX, worldY, type) {
+            if (!isPositionClear(worldX, worldY, 60)) {
+                createShockwave(worldX, worldY, '#ff3333');
+                setSystemMsg("位置无效", "warning", true);
+                return;
+            }
+             
+            let cost = 0;
+            if (type === 'plant') cost = CONFIG.costPlant;
+            else if (type === 'nuclear') cost = CONFIG.costNuclear;
+            else if (type === 'battery') cost = CONFIG.costBattery;
+             
+            if (money < cost) {
+                createShockwave(worldX, worldY, '#ff3333');
+                setSystemMsg("资金不足", "warning", true);
+                return;
+            }
+             
+            money -= cost;
+             
+            if (type === 'plant' || type === 'nuclear') {
+                const isNuc = type === 'nuclear';
+                sources.push({ 
+                    x: worldX, y: worldY, 
+                    radius: 25, type: 'source', id: Math.random(), 
+                    load: 0, heat: 0, 
+                    capacity: isNuc ? CONFIG.nuclearCapacity : CONFIG.plantCapacity, 
+                    spawnScale: 0, displayLoad: 0, rotation: 0,
+                    variant: isNuc ? 'nuclear' : 'standard'
+                });
+                setSystemMsg(`${isNuc ? '核电站' : '电厂'}已建造 (-$${cost})`, "success", true);
+                createExplosion(worldX, worldY, isNuc ? '#00ff66' : '#fff', 20);
+            } else if (type === 'battery') {
+                batteries.push({
+                    x: worldX, y: worldY,
+                    type: 'battery', id: Math.random(),
+                    energy: 0, maxEnergy: CONFIG.batteryCapacity,
+                    spawnScale: 0, powered: false, currentOp: 'idle', 
+                    targetLoad: 0 
+                });
+                setSystemMsg(`电池已建造 (-$${cost})`, "success", true);
+                createExplosion(worldX, worldY, '#00ff00', 15);
+            }
+             
+            updatePowerGrid();
+             
+            // 如果是放置模式，继续保持该模式
+            if (placementMode) {
+                // 延迟一帧更新提示信息
+                setTimeout(() => {
+                    if (placementMode) {
+                        let buildingName = '';
+                        if (placementMode === 'plant') buildingName = '电厂';
+                        else if (placementMode === 'nuclear') buildingName = '核电站';
+                        else if (placementMode === 'battery') buildingName = '电池';
+                        setSystemMsg(`继续放置${buildingName} - 右键退出`, "highlight");
+                    }
+                }, 100);
+            }
+        }
+ 
+        // --- 改进的输入处理 ---
+        function getCanvasCoordinates(event) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            let clientY = event.touches ? event.touches[0].clientY : event.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+ 
+        // 触摸手势处理
+        function getTouchDistance(e) {
+            if (e.touches.length < 2) return 0;
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+ 
+        function handleTouchStart(e) {
+            if (e.touches.length === 2) {
+                isZooming = true;
+                touchStartDist = getTouchDistance(e);
+                e.preventDefault();
+            } else if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                lastTouchX = touch.clientX;
+                lastTouchY = touch.clientY;
+                 
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                 
+                // 检查是否在实体上
+                const worldPos = toWorld(x, y);
+                const entity = getEntityAt(worldPos.x, worldPos.y);
+                 
+                if (!entity) {
+                    // 如果不在实体上，可能是拖动视图
+                    setTimeout(() => {
+                        if (!input.isDown && !dragStartNode) {
+                            isPanning = true;
+                        }
+                    }, 100);
+                }
+            }
+        }
+ 
+        function handleTouchMove(e) {
+            if (isZooming && e.touches.length === 2) {
+                const dist = getTouchDistance(e);
+                const scaleFactor = dist / touchStartDist;
+                currentScale = Math.max(CONFIG.minScale, Math.min(CONFIG.maxScale, currentScale * scaleFactor));
+                touchStartDist = dist;
+                e.preventDefault();
+            } else if (isPanning && e.touches.length === 1 && !input.isDown) {
+                const touch = e.touches[0];
+                const dx = touch.clientX - lastTouchX;
+                const dy = touch.clientY - lastTouchY;
+                viewOffsetX += dx;
+                viewOffsetY += dy;
+                lastTouchX = touch.clientX;
+                lastTouchY = touch.clientY;
+                e.preventDefault();
+            }
+        }
+ 
+        function handleTouchEnd(e) {
+            if (e.touches.length === 0) {
+                isZooming = false;
+                isPanning = false;
+            }
+        }
+ 
+        // 鼠标滚轮缩放
+        function handleWheel(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            currentScale = Math.max(CONFIG.minScale, Math.min(CONFIG.maxScale, currentScale * delta));
+        }
+ 
+        // 键盘快捷键
+        function handleKeyDown(e) {
+            if (e.key === 'Shift') {
+                isHighVoltageMode = true;
+                if (dragStartNode) {
+                    setSystemMsg("高压线模式", "highlight");
+                }
+            } else if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            } else if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        }
+ 
+        function handleKeyUp(e) {
+            if (e.key === 'Shift') {
+                isHighVoltageMode = false;
+                if (dragStartNode) {
+                    clearSystemMsg();
+                }
+            }
+        }
+ 
+        // 左键操作
+        function handleLeftClick(mouseX, mouseY) {
+            if (gameOver || isPanning) return;
+            const wPos = toWorld(mouseX, mouseY);
+            input.worldX = wPos.x; 
+            input.worldY = wPos.y;
+             
+            // 如果在建筑放置模式
+            if (placementMode) {
+                placeBuildingAt(input.worldX, input.worldY, placementMode);
+                return;
+            }
+             
+            // Shift+左键点击电线才升级
+            if (isHighVoltageMode) {
+                const clickedLink = getLinkAt(input.worldX, input.worldY);
+                if (clickedLink && !clickedLink.upgraded) {
+                    const dist = Math.hypot(clickedLink.from.x - clickedLink.to.x, clickedLink.from.y - clickedLink.to.y);
+                    const cost = Math.floor(dist * CONFIG.costWirePerUnit * CONFIG.costUpgradeMult);
+                    if (money >= cost) {
+                        money -= cost;
+                        clickedLink.upgraded = true;
+                        clickedLink.maxLoad = CONFIG.upgradedWireLoad;
+                        createExplosion((clickedLink.from.x + clickedLink.to.x)/2, (clickedLink.from.y + clickedLink.to.y)/2, CONFIG.colors.wireUpgraded, 15);
+                        setSystemMsg(`电线已升级 (-$${cost})`, "success", true);
+                        updatePowerGrid();
+                    } else {
+                        createShockwave(input.worldX, input.worldY, '#ff3333');
+                        setSystemMsg("资金不足", "warning", true);
+                    }
+                    return;
+                }
+            }
+             
+            // 检查是否在实体上（开始拉线）
+            const hovered = getEntityAt(input.worldX, input.worldY, 30);
+            if (hovered) {
+                input.isDown = true;
+                dragStartNode = hovered;
+                snapTarget = null;
+            }
+        }
+ 
+        // 右键操作
+        function handleRightClick(mouseX, mouseY) {
+            if (gameOver) return;
+             
+            // 如果在建筑放置模式，右键退出
+            if (placementMode) {
+                exitPlacementMode();
+                return;
+            }
+             
+            // 正常的拆除功能
+            const wPos = toWorld(mouseX, mouseY);
+             
+            // 先尝试拆除实体
+            const entity = getEntityAt(wPos.x, wPos.y, 30);
+            if (entity && (entity.type === 'pylon' || entity.type === 'battery')) {
+                deleteEntity(entity);
+                createExplosion(entity.x, entity.y, '#ffaa00', 15);
+                return;
+            }
+             
+            // 再尝试拆除电线
+            const link = getLinkAt(wPos.x, wPos.y);
+            if (link) {
+                deleteLink(link);
+                createExplosion((link.from.x + link.to.x)/2, (link.from.y + link.to.y)/2, '#ffaa00', 10);
+            }
+        }
+ 
+        function handleInputMove(mouseX, mouseY) {
+            input.x = mouseX; input.y = mouseY;
+            const wPos = toWorld(mouseX, mouseY);
+            input.worldX = wPos.x; input.worldY = wPos.y;
+ 
+            // 如果在建筑放置模式
+            if (placementMode) {
+                const isValid = isPositionClear(input.worldX, input.worldY, 60);
+                let cost = 0;
+                let buildingName = '';
+                if (placementMode === 'plant') { cost = CONFIG.costPlant; buildingName = '电厂'; }
+                else if (placementMode === 'nuclear') { cost = CONFIG.costNuclear; buildingName = '核电站'; }
+                else if (placementMode === 'battery') { cost = CONFIG.costBattery; buildingName = '电池'; }
+                 
+                if (!isValid) {
+                    setSystemMsg(`此处无法放置${buildingName}`, "warning");
+                } else if (money < cost) {
+                    setSystemMsg(`资金不足 (需要$${cost})`, "warning");
+                } else {
+                    setSystemMsg(`左键放置${buildingName} ($${cost})`, "highlight");
+                }
+                return;
+            }
+ 
+            // 拉线模式
+            if (input.isDown && dragStartNode) {
+                const entity = getEntityAt(input.worldX, input.worldY, CONFIG.snapDistance);
+                snapTarget = (entity && entity !== dragStartNode) ? entity : null;
+                validBuildPos = !snapTarget ? isPositionClear(input.worldX, input.worldY, CONFIG.minEntityDist) : true;
+                 
+                const targetX = snapTarget ? snapTarget.x : input.worldX;
+                const targetY = snapTarget ? snapTarget.y : input.worldY;
+                isIntersecting = checkIntersection(dragStartNode, {x: targetX, y: targetY});
+ 
+                const dist = Math.hypot(targetX - dragStartNode.x, targetY - dragStartNode.y);
+                const isValidLen = dist <= CONFIG.maxWireLength && dist > 10;
+                 
+                if (isValidLen) {
+                    const isHV = isHighVoltageMode;
+                    const costMult = isHV ? CONFIG.costUpgradeMult : 1;
+                    const wireCost = Math.floor(dist * CONFIG.costWirePerUnit * costMult);
+                    let estCost = wireCost + (!snapTarget && validBuildPos ? CONFIG.costPylon : 0);
+                    let label = (!snapTarget && validBuildPos) ? "建造电塔" : "连接";
+                    if (isHV) label = "高压" + label;
+ 
+                    if (isIntersecting) setSystemMsg("错误: 线路交叉", "warning");
+                    else if (money < estCost) setSystemMsg(`成本: $${estCost} (资金不足)`, "warning");
+                    else setSystemMsg(`${label} 成本: $${estCost}`, "highlight");
+                } else {
+                    setSystemMsg("距离无效", "warning");
+                }
+            } else {
+                // 悬停提示
+                hoveredEntity = getEntityAt(input.worldX, input.worldY, 30);
+                hoveredLink = !hoveredEntity ? getLinkAt(input.worldX, input.worldY) : null;
+                 
+                if (hoveredEntity) {
+                    if (hoveredEntity.type === 'pylon' || hoveredEntity.type === 'battery') {
+                        setSystemMsg("右键拆除", "normal");
+                    } else {
+                        setSystemMsg("左键拖动建造电线", "normal");
+                    }
+                } else if (hoveredLink) {
+                    if (isHighVoltageMode) {
+                        // 按住Shift时显示升级提示
+                        if (hoveredLink.upgraded) {
+                            setSystemMsg("已是高压线", "normal");
+                        } else {
+                            const dist = Math.hypot(hoveredLink.from.x - hoveredLink.to.x, hoveredLink.from.y - hoveredLink.to.y);
+                            const cost = Math.floor(dist * CONFIG.costWirePerUnit * CONFIG.costUpgradeMult);
+                            setSystemMsg(`Shift+左键升级 ($${cost})`, "highlight");
+                        }
+                    } else {
+                        // 默认显示删除提示
+                        setSystemMsg("右键删除电线", "warning");
+                    }
+                } else {
+                    clearSystemMsg();
+                }
+            }
+        }
+ 
+        function handleInputEnd() {
+            if (input.isDown && dragStartNode) {
+                const targetPos = snapTarget ? snapTarget : { x: input.worldX, y: input.worldY };
+                const dist = Math.hypot(targetPos.x - dragStartNode.x, targetPos.y - dragStartNode.y);
+                const isValidLength = dist <= CONFIG.maxWireLength && dist > 10;
+                 
+                if (isValidLength && !isIntersecting) {
+                    const isHV = isHighVoltageMode;
+                    const costMult = isHV ? CONFIG.costUpgradeMult : 1;
+                    const wireCost = Math.floor(dist * CONFIG.costWirePerUnit * costMult);
+                     
+                    if (snapTarget) {
+                        if (money >= wireCost) tryConnect(dragStartNode, snapTarget, wireCost, isHV);
+                        else { createShockwave(input.worldX, input.worldY, '#ff3333'); setSystemMsg("资金不足", "warning", true); }
+                    } else if (validBuildPos) {
+                        const totalCost = wireCost + CONFIG.costPylon;
+                        if (money >= totalCost) tryBuildPylon(input.worldX, input.worldY, dragStartNode, totalCost, isHV);
+                        else { createShockwave(input.worldX, input.worldY, '#ff3333'); setSystemMsg("资金不足", "warning", true); }
+                    } else { createShockwave(input.worldX, input.worldY, '#ff0000'); setSystemMsg("位置错误", "warning", true); }
+                } else { createShockwave(input.worldX, input.worldY, '#ff0000'); setSystemMsg("长度错误", "warning", true); }
+            }
+            input.isDown = false; dragStartNode = null; snapTarget = null; isIntersecting = false;
+            clearSystemMsg();
+        }
+ 
+        // 注册事件监听器
+        canvas.addEventListener('mousedown', e => {
+            const c = getCanvasCoordinates(e);
+            if (e.button === 0) { // 左键
+                handleLeftClick(c.x, c.y);
+            } else if (e.button === 2) { // 右键
+                handleRightClick(c.x, c.y);
+            }
+        });
+         
+        canvas.addEventListener('mousemove', e => {
+            const c = getCanvasCoordinates(e);
+            handleInputMove(c.x, c.y);
+        });
+         
+        canvas.addEventListener('mouseup', e => {
+            if (e.button === 0) handleInputEnd();
+        });
+         
+        // 触摸事件
+        canvas.addEventListener('touchstart', e => { 
+            handleTouchStart(e);
+            if (e.touches.length === 1 && !isZooming) {
+                const c = getCanvasCoordinates(e);
+                handleLeftClick(c.x, c.y);
+            }
+        }, {passive: false});
+         
+        canvas.addEventListener('touchmove', e => { 
+            handleTouchMove(e);
+            if (e.touches.length === 1 && !isZooming && !isPanning) {
+                const c = getCanvasCoordinates(e); 
+                handleInputMove(c.x, c.y); 
+            }
+        }, {passive: false});
+         
+        canvas.addEventListener('touchend', e => { 
+            handleTouchEnd(e);
+            if (!isZooming && !isPanning) {
+                handleInputEnd(); 
+            }
+        });
+ 
+        canvas.addEventListener('wheel', handleWheel, {passive: false});
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+ 
+        // --- Core Logic ---
+        function deleteEntity(entity) {
+            let refundTotal = 0;
+            const connectedLinks = links.filter(l => l.from === entity || l.to === entity);
+            connectedLinks.forEach(l => {
+                const dist = Math.hypot(l.from.x - l.to.x, l.from.y - l.to.y);
+                const costMult = l.upgraded ? CONFIG.costUpgradeMult : 1;
+                refundTotal += Math.floor(Math.floor(dist * CONFIG.costWirePerUnit * costMult) * CONFIG.refundRate);
+            });
+            if (entity.type === 'pylon') {
+                refundTotal += Math.floor(CONFIG.costPylon * CONFIG.refundRate);
+                pylons = pylons.filter(p => p !== entity);
+            } else if (entity.type === 'battery') {
+                refundTotal += Math.floor(CONFIG.costBattery * CONFIG.refundRate);
+                batteries = batteries.filter(b => b !== entity);
+            }
+            links = links.filter(l => l.from !== entity && l.to !== entity);
+            money += refundTotal;
+            updatePowerGrid();
+            setSystemMsg(`返还 +$${refundTotal}`, "success", true);
+        }
+ 
+        function deleteLink(link) {
+            const dist = Math.hypot(link.from.x - link.to.x, link.from.y - link.to.y);
+            const costMult = link.upgraded ? CONFIG.costUpgradeMult : 1;
+            const refund = Math.floor(Math.floor(dist * CONFIG.costWirePerUnit * costMult) * CONFIG.refundRate);
+            money += refund;
+            links = links.filter(l => l !== link);
+            updatePowerGrid();
+            setSystemMsg(`返还 +$${refund}`, "success", true);
+        }
+ 
+        function tryConnect(nodeA, nodeB, cost, isHV = false) {
+            if (links.some(l => (l.from === nodeA && l.to === nodeB) || (l.from === nodeB && l.to === nodeA))) {
+                setSystemMsg("已经连接", "warning", true);
+                return;
+            }
+            money -= cost;
+            const maxLoad = isHV ? CONFIG.upgradedWireLoad : CONFIG.baseWireLoad;
+            links.push({ 
+                from: nodeA, to: nodeB, 
+                active: false, load: 0, heat: 0, spawnProgress: 0, 
+                maxLoad: maxLoad, upgraded: isHV 
+            }); 
+            if (isHV) {
+                 createExplosion((nodeA.x + nodeB.x)/2, (nodeA.y + nodeB.y)/2, CONFIG.colors.wireUpgraded, 15);
+            }
+            updatePowerGrid(); 
+            setSystemMsg(`已连接 (-$${cost})`, "normal", true);
+        }
+ 
+        function tryBuildPylon(x, y, parentNode, cost, isHV = false) {
+            money -= cost;
+            const newPylon = { x: x, y: y, type: 'pylon', powered: false, id: Math.random(), spawnScale: 0 }; 
+            pylons.push(newPylon);
+            const maxLoad = isHV ? CONFIG.upgradedWireLoad : CONFIG.baseWireLoad;
+            links.push({ 
+                from: parentNode, to: newPylon, 
+                active: false, load: 0, heat: 0, spawnProgress: 0, 
+                maxLoad: maxLoad, upgraded: isHV 
+            });
+            createExplosion(x, y, isHV ? CONFIG.colors.wireUpgraded : CONFIG.colors.powerOn, 10);
+            updatePowerGrid();
+            setSystemMsg(`已建造 (-$${cost})`, "normal", true);
+        }
+ 
+        function spawnEntity(forcedType = null) {
+            let attempts = 0;
+            const maxAttempts = 100; 
+            let currentMinDist = CONFIG.minEntityDist + 10;
+            let x, y;
+            const worldViewW = width / currentScale;
+            const worldViewH = height / currentScale;
+ 
+            do {
+                attempts++;
+                if (attempts > 50) currentMinDist = CONFIG.minEntityDist * 0.7;
+                x = (Math.random() - 0.5) * worldViewW;
+                y = (Math.random() - 0.5) * worldViewH;
+                if (!isPositionClear(x, y, currentMinDist)) continue;
+                if (Math.hypot(x, y) < 150) continue;
+                let hitWire = false;
+                for (let l of links) {
+                    if (distToSegment({x, y}, l.from, l.to) < 20) { hitWire = true; break; }
+                }
+                if (hitWire) continue;
+                break;
+            } while (attempts < maxAttempts);
+ 
+            if (attempts >= maxAttempts) return; 
+             
+            let type = forcedType || 'house';
+ 
+            houses.push({ 
+                x: x, y: y, 
+                type: type, 
+                powered: false, 
+                patience: CONFIG.houseMaxPatience, 
+                id: Math.random(), 
+                spawnScale: 0,
+                load: type === 'factory' ? CONFIG.factoryLoad : 1, 
+                currentLoad: type === 'commercial' ? CONFIG.commBaseLoad : 1, 
+                phase: Math.random() * Math.PI * 2 
+            }); 
+             
+            if (type === 'factory') {
+                 setSystemMsg("警告: 检测到工业区", "warning", true);
+                 createShockwave(x, y, CONFIG.colors.factory);
+            } else if (type === 'commercial') {
+                 setSystemMsg("新商业区", "normal", true);
+                 createShockwave(x, y, CONFIG.colors.comm);
+            }
+             
+            totalSpawns++;
+        }
+ 
+        function updatePowerGrid(silent = false) {
+            const prevPowered = new Set();
+            pylons.forEach(p => { if(p.powered) prevPowered.add(p); p.powered = false; });
+            houses.forEach(h => { if(h.powered) prevPowered.add(h); h.powered = false; });
+            batteries.forEach(b => { if(b.powered) prevPowered.add(b); b.powered = false; });
+            links.forEach(l => { l.active = false; l.load = 0; });
+            sources.forEach(s => s.load = 0); 
+ 
+            let queue = [];
+            let visited = new Map(); 
+ 
+            sources.forEach(s => {
+                queue.push({ node: s, depth: 0, sourceRoot: s });
+                visited.set(s, { depth: 0, parentLink: null });
+            });
+ 
+            while (queue.length > 0) {
+                let currentObj = queue.shift();
+                let u = currentObj.node;
+ 
+                for (let link of links) {
+                    let v = (link.from === u) ? link.to : (link.to === u ? link.from : null);
+                    if (v) {
+                        if (!visited.has(v)) {
+                            visited.set(v, { depth: currentObj.depth + 1, parentLink: link });
+                            link.active = true;
+                            v.powered = true;
+                            queue.push({ node: v, depth: currentObj.depth + 1 });
+                        } else if (visited.get(v).parentLink !== link) {
+                            link.active = true;
+                        }
+                    }
+                }
+            }
+ 
+            let nodesByDepth = Array.from(visited.keys()).sort((a, b) => visited.get(b).depth - visited.get(a).depth);
+            for (let node of nodesByDepth) {
+                if (node.type === 'source') continue;
+                const feedLink = visited.get(node).parentLink;
+                if (feedLink) {
+                    // Calculate load based on node type
+                    let nodeLoad = 0;
+                    if (node.type === 'house') nodeLoad = 1;
+                    else if (node.type === 'factory') nodeLoad = CONFIG.factoryLoad;
+                    else if (node.type === 'commercial') nodeLoad = node.currentLoad || CONFIG.commBaseLoad;
+                    else if (node.type === 'battery') nodeLoad = node.targetLoad || 0;
+                     
+                    let totalLoad = nodeLoad + (node.accumulatedLoad || 0);
+                     
+                    feedLink.load += totalLoad;
+                    let parentNode = (feedLink.from === node) ? feedLink.to : feedLink.from;
+                    if (parentNode.type === 'source') parentNode.load += totalLoad;
+                    else {
+                        parentNode.accumulatedLoad = (parentNode.accumulatedLoad || 0) + totalLoad;
+                    }
+                }
+                node.accumulatedLoad = 0;
+            }
+ 
+            if (!silent) {
+                houses.forEach(h => { 
+                    if (h.powered && !prevPowered.has(h)) {
+                        let col = CONFIG.colors.houseHappy;
+                        if(h.type === 'factory') col = CONFIG.colors.factoryHappy;
+                        if(h.type === 'commercial') col = CONFIG.colors.commHappy;
+                        createExplosion(h.x, h.y, col, h.type === 'house' ? 8 : 15); 
+                    }
+                });
+            }
+        }
+ 
+        function update(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) * timeScale;
+            lastTime = timestamp;
+            gameTime += dt;
+ 
+            updateViewBounds();
+ 
+            if (currentScale > CONFIG.minScale) {
+                const currentWorldWidth = width / currentScale;
+                const newWorldWidth = currentWorldWidth + (CONFIG.viewExpansionRate * dt);
+                currentScale = width / newWorldWidth;
+                if (currentScale < CONFIG.minScale) currentScale = CONFIG.minScale;
+            }
+ 
+            if (gameOver) return;
+ 
+            // --- REPLAY SYSTEM UPDATE ---
+            if (gameTime - lastSnapshotTime > 1000) { 
+                takeSnapshot();
+                lastSnapshotTime = gameTime;
+            }
+ 
+            // --- 1. Dynamic Load Update (Commercial) ---
+            houses.forEach(h => {
+                if (h.type === 'commercial') {
+                    const sineVal = (Math.sin((gameTime * 0.001) + h.phase) + 1) / 2; 
+                    h.currentLoad = CONFIG.commBaseLoad + (sineVal * (CONFIG.commPeakLoad - CONFIG.commBaseLoad));
+                }
+            });
+ 
+            // --- 2. Battery Control Logic ---
+            let gridStressed = false;
+            let gridRelaxed = true;
+             
+            sources.forEach(s => {
+                if (s.heat > 0 || s.load > s.capacity * 0.95) {
+                    gridStressed = true;
+                    gridRelaxed = false;
+                } else if (s.load > s.capacity * 0.8) {
+                    gridRelaxed = false;
+                }
+            });
+ 
+            batteries.forEach(b => {
+                if (!b.powered) {
+                    b.targetLoad = 0; b.currentOp = 'idle';
+                    return;
+                }
+ 
+                if (gridStressed && b.energy > 0) {
+                    b.currentOp = 'discharge';
+                    b.targetLoad = -CONFIG.batteryDischargeRate;
+                    b.energy -= (CONFIG.batteryDischargeRate * 0.05 * timeScale); 
+                    if (b.energy < 0) b.energy = 0;
+                    if (Math.random() < 0.1 * timeScale) {
+                        particles.push({ x: b.x, y: b.y, vx: 0, vy: -2, life: 0.4, decay: 0.05, color: '#ffff00', size: 2 });
+                    }
+                } else if (gridRelaxed && b.energy < b.maxEnergy) {
+                    b.currentOp = 'charge';
+                    b.targetLoad = CONFIG.batteryChargeRate;
+                    b.energy += (CONFIG.batteryChargeRate * 0.05 * timeScale);
+                    if (b.energy > b.maxEnergy) b.energy = b.maxEnergy;
+                } else {
+                    b.currentOp = 'idle';
+                    b.targetLoad = 0;
+                }
+            });
+ 
+            if (gameTime - lastIncomeGameTime > CONFIG.economyTickRate) {
+                let income = CONFIG.baseSubsidy;
+                houses.forEach(h => {
+                    if (h.powered) {
+                        let val = CONFIG.incomePerHouse;
+                        if (h.type === 'factory') val = CONFIG.incomePerFactory;
+                        if (h.type === 'commercial') val = CONFIG.incomePerComm;
+                        income += val;
+                    }
+                });
+                 
+                let upkeep = 0;
+                sources.forEach(s => {
+                    upkeep += (s.variant === 'nuclear' ? CONFIG.nuclearUpkeep : CONFIG.upkeepPerPlant);
+                });
+                 
+                income -= upkeep;
+                currentNetIncome = income;
+                money += currentNetIncome;
+                lastIncomeGameTime = gameTime;
+            }
+ 
+            // --- SPAWNING LOGIC (Fixed Intervals) ---
+            const totalPop = houses.length + pylons.length + batteries.length; 
+             
+            // Adjust House Spawn Rate dynamically to maintain pacing
+            let currentHouseSpawnRate = CONFIG.spawnRate; // 8000
+            if (totalPop >= CONFIG.commUnlockPop) currentHouseSpawnRate = 12000; // Slow down to 12s
+            else if (totalPop >= CONFIG.factoryUnlockPop) currentHouseSpawnRate = 10000; // Slow down to 10s
+             
+            // 1. Houses
+            if (gameTime - lastSpawnGameTime > currentHouseSpawnRate) {
+                spawnEntity('house');
+                lastSpawnGameTime = gameTime;
+            }
+             
+            // 2. Factories
+            if (totalPop >= CONFIG.factoryUnlockPop && gameTime - lastFactorySpawnTime > CONFIG.factorySpawnRate) {
+                spawnEntity('factory');
+                lastFactorySpawnTime = gameTime;
+            }
+             
+            // 3. Commercial
+            if (totalPop >= CONFIG.commUnlockPop && gameTime - lastCommSpawnTime > CONFIG.commSpawnRate) {
+                spawnEntity('commercial');
+                lastCommSpawnTime = gameTime;
+            }
+ 
+            // Animation & Physics
+            const animSpeed = 0.05 * timeScale * (60/16); 
+            [sources, pylons, houses, batteries].forEach(arr => {
+                arr.forEach(e => {
+                    if (e.spawnScale < 1) {
+                        e.spawnScale += (1 - e.spawnScale) * 0.1; 
+                        if (e.spawnScale > 0.99) e.spawnScale = 1;
+                    }
+                });
+            });
+ 
+            links.forEach(l => {
+                if (l.spawnProgress < 1) {
+                    l.spawnProgress += 0.1; 
+                    if (l.spawnProgress > 1) l.spawnProgress = 1;
+                }
+            });
+ 
+            isCriticalState = false;
+ 
+            sources.forEach(s => {
+                s.displayLoad = (s.displayLoad || 0) + (s.load - (s.displayLoad || 0)) * 0.1;
+                s.rotation = (s.rotation || 0) + (0.01 + (s.displayLoad / s.capacity) * 0.05) * timeScale;
+ 
+                if (s.load > s.capacity) {
+                    s.heat += CONFIG.overheatSpeed * 2 * timeScale;
+                    if (timeScale > 0 && Math.random() < 0.1) particles.push({ x: s.x, y: s.y, vx: 0, vy: -2, life: 0.6, decay: 0.05, color: '#ff0000', size: 2 });
+                } else if (s.heat > 0) s.heat -= 0.5 * timeScale;
+ 
+                if (s.heat > 80) isCriticalState = true;
+ 
+                if (s.heat >= CONFIG.maxHeat) {
+                    triggerGameOver("发电机核心熔毁。");
+                }
+            });
+ 
+            let brokenLinks = [];
+            links.forEach(l => {
+                const limit = l.maxLoad || CONFIG.baseWireLoad;
+                if (l.active) {
+                    if (l.load > limit) {
+                        l.heat += CONFIG.overheatSpeed * timeScale;
+                    } else if (l.heat > 0) l.heat -= 0.2 * timeScale;
+ 
+                    if (l.heat >= CONFIG.maxHeat) {
+                        brokenLinks.push(l);
+                        createExplosion((l.from.x+l.to.x)/2, (l.from.y+l.to.y)/2, '#ff5500', 20);
+                        createShockwave((l.from.x+l.to.x)/2, (l.from.y+l.to.y)/2, '#ff0000');
+                        setSystemMsg("警告: 线路故障", "warning", true);
+                    }
+                } else l.heat = 0;
+            });
+ 
+            if (brokenLinks.length > 0) {
+                links = links.filter(l => !brokenLinks.includes(l));
+                updatePowerGrid();
+            }
+ 
+            for (let i = houses.length - 1; i >= 0; i--) {
+                let h = houses[i];
+                let alert = false; let critical = false;
+                if (h.powered) {
+                    if (h.patience < CONFIG.houseMaxPatience) h.patience += 15 * timeScale;
+                } else {
+                    h.patience -= 1 * timeScale;
+                    if (h.patience < CONFIG.houseMaxPatience * 0.4) alert = true;
+                    if (h.patience < CONFIG.houseMaxPatience * 0.3) {
+                        critical = true;
+                        isCriticalState = true;
+                    }
+                }
+                if (h.patience <= 0) {
+                    h.dead = true; 
+                    let col = CONFIG.colors.houseAngry;
+                    if(h.type === 'factory') col = CONFIG.colors.factory;
+                    if(h.type === 'commercial') col = CONFIG.colors.comm;
+                     
+                    createExplosion(h.x, h.y, col, 20);
+                     
+                    // HARDCORE MODE: ANY FAILURE IS GAME OVER
+                    let msg = "居民离开";
+                    if(h.type === 'factory') msg = "工业崩溃";
+                    if(h.type === 'commercial') msg = "商业破产";
+                     
+                    triggerGameOver(`${msg} - 关键故障`);
+                    return; // Stop update loop
+                }
+                h.isAlert = alert; h.isCritical = critical;
+            }
+            // Dead house removal logic is redundant if game over is triggered, but kept for robustness
+            if (houses.some(h => h.dead)) {
+                houses = houses.filter(h => !h.dead);
+                updatePowerGrid();
+            }
+ 
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx * timeScale; p.y += p.vy * timeScale;
+                p.life -= p.decay * timeScale;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            updateUI();
+            updateSystemUI();
+        }
+ 
+        function triggerGameOver(reason) {
+            gameOver = true;
+            takeSnapshot(); 
+            gameOverReason.innerText = reason;
+            createExplosion(0, 0, '#ff0000', 50);
+             
+            // Set slider Range
+            replaySlider.max = Math.max(0, gameHistory.length - 1);
+            replaySlider.value = 0;
+            renderReplayFrame(0);
+             
+            gameOverScreen.classList.add('active');
+        }
+ 
+        function createExplosion(x, y, color, count) {
+            if (!isInView(x, y, 100)) return; 
+            for(let i=0; i<count; i++) {
+                particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, life: 1.0, decay: 0.02 + Math.random() * 0.03, color: color, size: 1 + Math.random() * 3 });
+            }
+        }
+         
+        function createShockwave(x, y, color) {
+            if (!isInView(x, y, 100)) return;
+            particles.push({ x: x, y: y, vx: 0, vy: 0, life: 1.0, decay: 0.05, color: color, size: 0, type: 'shockwave' });
+        }
+         
+        function updateUI() {
+            moneyEl.innerText = '$' + Math.floor(money);
+            let sign = currentNetIncome >= 0 ? '+' : '';
+            incomeEl.innerText = `${sign}$${currentNetIncome}/s`;
+            incomeEl.style.color = currentNetIncome >= 0 ? '#00ffaa' : '#ff3333';
+            const total = houses.length;
+            const powered = houses.filter(h => h.powered).length;
+            const pct = total === 0 ? 100 : Math.floor((powered/total)*100);
+            coverageEl.innerText = pct + '%'; 
+            coverageEl.style.color = pct < 50 ? '#ff3333' : '#00ffff';
+            scaleEl.innerText = `${total}`;
+        }
+ 
+        // --- Optimized Rendering ---
+        function draw() {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = CONFIG.colors.bg;
+            ctx.fillRect(0, 0, width, height);
+             
+            ctx.save();
+            ctx.translate(cx + viewOffsetX, cy + viewOffsetY);
+            ctx.scale(currentScale, currentScale);
+             
+            // --- 1. Grid ---
+            ctx.strokeStyle = CONFIG.colors.grid;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath();
+            const gridSz = 50;
+            const startX = Math.floor(viewBounds.minX / gridSz) * gridSz;
+            const endX = Math.ceil(viewBounds.maxX / gridSz) * gridSz;
+            const startY = Math.floor(viewBounds.minY / gridSz) * gridSz;
+            const endY = Math.ceil(viewBounds.maxY / gridSz) * gridSz;
+             
+            for(let x=startX; x<=endX; x+=gridSz) { ctx.moveTo(x, startY); ctx.lineTo(x, endY); }
+            for(let y=startY; y<=endY; y+=gridSz) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+ 
+            // --- 2. Links (Glow Pass) ---
+            ctx.globalCompositeOperation = 'lighter';
+            links.forEach(l => {
+                if (!isLinkInView(l)) return;
+                const limit = l.maxLoad || CONFIG.baseWireLoad;
+                 
+                if (l === hoveredLink) {
+                    // 根据模式显示不同的悬停效果
+                    if (isHighVoltageMode && !l.upgraded) {
+                        // Shift模式下显示升级预览
+                        ctx.strokeStyle = CONFIG.colors.upgradeHighlight;
+                        ctx.lineWidth = 12; ctx.globalAlpha = 0.5;
+                        ctx.beginPath(); ctx.moveTo(l.from.x, l.from.y); ctx.lineTo(l.to.x, l.to.y); ctx.stroke();
+                    } else if (!isHighVoltageMode) {
+                        // 默认显示删除预览
+                        ctx.strokeStyle = CONFIG.colors.deleteHighlight;
+                        ctx.lineWidth = 12; ctx.globalAlpha = 0.5;
+                        ctx.beginPath(); ctx.moveTo(l.from.x, l.from.y); ctx.lineTo(l.to.x, l.to.y); ctx.stroke();
+                    }
+                } else if (l.active) {
+                    const loadRatio = Math.min(1.0, l.load / limit);
+                     
+                    if (l.upgraded) {
+                        ctx.strokeStyle = CONFIG.colors.wireUpgradedGlow;
+                    } else {
+                        const hue = 180 - (loadRatio * 180);
+                        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                    }
+                     
+                    if (loadRatio > 0 || l.upgraded) {
+                        let thickness = 6 + loadRatio * 6 + Math.sin(Date.now()/200)*2;
+                        if (l.upgraded) thickness += 4;
+                         
+                        ctx.lineWidth = thickness;
+                        ctx.globalAlpha = 0.4;
+                        ctx.beginPath(); ctx.moveTo(l.from.x, l.from.y); ctx.lineTo(l.to.x, l.to.y); ctx.stroke();
+                    }
+                }
+            });
+ 
+            // --- 3. Links (Core) ---
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
+            links.forEach(l => {
+                if (!isLinkInView(l)) return;
+                const limit = l.maxLoad || CONFIG.baseWireLoad;
+                 
+                let endX = l.to.x; let endY = l.to.y;
+                if (l.spawnProgress < 1) {
+                    endX = l.from.x + (l.to.x - l.from.x) * l.spawnProgress;
+                    endY = l.from.y + (l.to.y - l.from.y) * l.spawnProgress;
+                }
+                ctx.beginPath(); 
+                let hue = 180; let lineWidth = 2; let jitter = 0;
+                 
+                if (l === hoveredLink) {
+                    if (isHighVoltageMode && !l.upgraded) {
+                        // Shift模式下升级预览
+                        ctx.strokeStyle = '#fff'; lineWidth = 3;
+                    } else if (!isHighVoltageMode) {
+                        // 默认删除预览
+                        ctx.strokeStyle = '#ff6666'; lineWidth = 3;
+                    } else {
+                        // 已升级的线
+                        ctx.strokeStyle = l.upgraded ? CONFIG.colors.wireUpgraded : CONFIG.colors.wire;
+                        lineWidth = l.upgraded ? 4 : 2;
+                    }
+                } else {
+                    if (l.active) {
+                        const loadRatio = Math.min(1.0, l.load / limit);
+                         
+                        if (l.upgraded) {
+                            ctx.strokeStyle = CONFIG.colors.wireUpgraded;
+                             lineWidth = 4;
+                             if (l.load > limit) {
+                                  if (Math.floor(Date.now() / 100) % 2 === 0) ctx.strokeStyle = '#fff';
+                                  jitter = 3;
+                             }
+                        } else {
+                            // Standard Wire
+                            hue = 180 - (loadRatio * 180);
+                            if (l.load > limit) { hue = 0; if (Math.floor(Date.now() / 100) % 2 === 0) hue = 60; lineWidth = 3; jitter = 3; } 
+                            else if (loadRatio > 0.8) { lineWidth = 2.5; jitter = 1; }
+                            ctx.strokeStyle = `hsl(${hue}, 100%, 75%)`;
+                        }
+                    } else {
+                        ctx.strokeStyle = l.upgraded ? '#5500aa' : CONFIG.colors.wire;
+                        if (l.upgraded) lineWidth = 3;
+                    }
+                    if (l.heat > 0) { jitter += (l.heat / CONFIG.maxHeat) * 5; if (l.heat > CONFIG.maxHeat * 0.5) ctx.strokeStyle = '#ff9999'; }
+                }
+                 
+                ctx.lineWidth = lineWidth; ctx.moveTo(l.from.x, l.from.y);
+                if (jitter > 0) {
+                    const dist = Math.hypot(l.from.x - endX, l.from.y - endY);
+                    const steps = Math.max(1, Math.floor(dist / 40)); 
+                    for(let i=1; i<steps; i++) {
+                        const t = i / steps;
+                        const lx = l.from.x + (endX - l.from.x) * t;
+                        const ly = l.from.y + (endY - l.from.y) * t;
+                        ctx.lineTo(lx + (Math.random()-0.5)*jitter, ly + (Math.random()-0.5)*jitter);
+                    }
+                }
+                ctx.lineTo(endX, endY); ctx.stroke();
+            });
+ 
+            // --- 4. Drag Line ---
+            if (input.isDown && dragStartNode) {
+                let targetX = input.worldX; let targetY = input.worldY; let isSnap = false;
+                if (snapTarget) { targetX = snapTarget.x; targetY = snapTarget.y; isSnap = true; }
+                const dist = Math.hypot(targetX - dragStartNode.x, targetY - dragStartNode.y);
+                const isValidLen = dist <= CONFIG.maxWireLength && dist > 10;
+                 
+                const isHV = isHighVoltageMode;
+                const costMult = isHV ? CONFIG.costUpgradeMult : 1;
+                const wireCost = Math.floor(dist * CONFIG.costWirePerUnit * costMult);
+                 
+                let estCost = wireCost + (!snapTarget && validBuildPos ? CONFIG.costPylon : 0);
+                const canAfford = money >= estCost;
+                const isGood = isValidLen && (isSnap || validBuildPos) && !isIntersecting && canAfford;
+                const lineColor = isGood ? (isHV ? CONFIG.colors.upgradeHighlight : CONFIG.colors.dragLineValid) : CONFIG.colors.dragLineInvalid;
+ 
+                ctx.beginPath(); ctx.moveTo(dragStartNode.x, dragStartNode.y); ctx.lineTo(targetX, targetY);
+                ctx.strokeStyle = lineColor; ctx.lineWidth = 3; ctx.setLineDash(isSnap ? [] : [15, 15]); ctx.stroke(); ctx.setLineDash([]);
+                 
+                if (isSnap && isGood) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(targetX, targetY, 30, 0, Math.PI*2); ctx.stroke(); }
+                 
+                ctx.beginPath(); ctx.arc(dragStartNode.x, dragStartNode.y, CONFIG.maxWireLength, 0, Math.PI*2);
+                ctx.strokeStyle = isGood ? 'rgba(0, 255, 255, 0.4)' : 'rgba(255, 50, 50, 0.4)';
+                ctx.lineWidth = 2; ctx.setLineDash([10, 10]); ctx.lineDashOffset = -Date.now() / 20; ctx.stroke(); ctx.setLineDash([]);
+            }
+ 
+            // --- 5. 建筑预览 ---
+            if (placementMode && input.worldX !== undefined) {
+                const isValid = isPositionClear(input.worldX, input.worldY, 60);
+                let cost = 0;
+                if (placementMode === 'plant') cost = CONFIG.costPlant;
+                else if (placementMode === 'nuclear') cost = CONFIG.costNuclear;
+                else if (placementMode === 'battery') cost = CONFIG.costBattery;
+ 
+                const canAfford = money >= cost;
+                const isGood = isValid && canAfford;
+                 
+                ctx.globalAlpha = 0.6;
+                if (placementMode === 'battery') {
+                     ctx.fillStyle = isGood ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+                     ctx.fillRect(input.worldX - 15, input.worldY - 10, 30, 20);
+                     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(input.worldX - 15, input.worldY - 10, 30, 20);
+                } else {
+                    ctx.beginPath(); ctx.arc(input.worldX, input.worldY, 25, 0, Math.PI*2);
+                    ctx.fillStyle = isGood ? (placementMode === 'nuclear' ? 'rgba(0, 255, 100, 0.5)' : 'rgba(0, 255, 0, 0.5)') : 'rgba(255, 0, 0, 0.5)';
+                    ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+                }
+                 
+                // 显示放置范围
+                ctx.strokeStyle = isGood ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 0, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(input.worldX, input.worldY, 60, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                 
+                ctx.globalAlpha = 1;
+            }
+ 
+            // --- 6. Entities (Glow) ---
+            ctx.globalCompositeOperation = 'lighter';
+             
+            sources.forEach(s => {
+                if (!isInView(s.x, s.y, 50)) return;
+                const scale = s.spawnScale || 1;
+                ctx.save(); ctx.translate(s.x, s.y); ctx.scale(scale, scale);
+                const loadPct = s.load / s.capacity;
+                const hue = s.variant === 'nuclear' ? 120 : Math.max(0, 50 - (loadPct * 50));
+                ctx.fillStyle = `hsl(${hue}, 100%, 30%)`; 
+                const breathe = 1 + Math.sin(Date.now() / 1000) * 0.05 * loadPct;
+                ctx.beginPath(); ctx.arc(0, 0, 32 * breathe, 0, Math.PI*2); ctx.fill(); 
+                ctx.restore();
+            });
+            ctx.fillStyle = 'rgba(0, 255, 170, 0.3)'; 
+            houses.forEach(h => {
+                if (!h.powered || !isInView(h.x, h.y, 30)) return;
+                const scale = h.spawnScale || 1;
+                ctx.save(); ctx.translate(h.x, h.y); ctx.scale(scale, scale);
+                 
+                if (h.type === 'factory') {
+                    ctx.fillStyle = h.powered ? 'rgba(255, 136, 0, 0.4)' : 'rgba(50, 20, 0, 0.4)';
+                    ctx.beginPath(); ctx.rect(-20, -20, 40, 40); ctx.fill();
+                } else if (h.type === 'commercial') {
+                    ctx.fillStyle = h.powered ? 'rgba(0, 136, 255, 0.4)' : 'rgba(0, 20, 50, 0.4)';
+                    ctx.beginPath();
+                    for(let i=0; i<6; i++) { const a = i*Math.PI/3; ctx.lineTo(Math.cos(a)*25, Math.sin(a)*25); }
+                    ctx.fill();
+                } else {
+                    ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            });
+ 
+            // --- 7. Entities (Core) ---
+            ctx.globalCompositeOperation = 'source-over';
+             
+            // Batteries
+            batteries.forEach(b => {
+                if (!isInView(b.x, b.y, 30)) return;
+                const scale = b.spawnScale || 1;
+                ctx.save(); ctx.translate(b.x, b.y); ctx.scale(scale, scale);
+                 
+                let color = b.powered ? CONFIG.colors.battery : CONFIG.colors.powerOff;
+                if (b.currentOp === 'discharge') color = CONFIG.colors.batteryDraining;
+                if (hoveredEntity === b) color = CONFIG.colors.deleteHighlight;
+ 
+                ctx.fillStyle = '#222';
+                ctx.fillRect(-15, -10, 30, 20);
+                ctx.strokeStyle = color; ctx.lineWidth = 2;
+                ctx.strokeRect(-15, -10, 30, 20);
+                 
+                // Energy Bar
+                const pct = b.energy / b.maxEnergy;
+                ctx.fillStyle = color;
+                ctx.fillRect(-12, -7, 24 * pct, 14);
+ 
+                // Icon / State
+                if (b.currentOp === 'charge') {
+                    ctx.fillStyle = '#fff'; ctx.font = '10px monospace'; ctx.fillText("+", -4, 4);
+                } else if (b.currentOp === 'discharge') {
+                    ctx.fillStyle = '#000'; ctx.font = '10px monospace'; ctx.fillText("-", -4, 4);
+                }
+ 
+                ctx.restore();
+            });
+ 
+            // Sources
+            sources.forEach(s => {
+                if (!isInView(s.x, s.y, 50)) return;
+                const scale = s.spawnScale || 1;
+                ctx.save(); ctx.translate(s.x, s.y); ctx.scale(scale, scale);
+                 
+                const loadPct = Math.min(1, s.displayLoad / s.capacity);
+                const isNuc = s.variant === 'nuclear';
+                const hue = isNuc ? 120 : Math.max(0, 50 - (loadPct * 50));
+                 
+                if (s.heat > 80 || loadPct > 0.95) {
+                    ctx.save();
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    let r = 35 + (Date.now() % 1000) / 20; 
+                    ctx.arc(0, 0, r, 0, Math.PI*2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+ 
+                ctx.save();
+                ctx.rotate(s.rotation * 0.5);
+                ctx.strokeStyle = `hsla(${hue}, 100%, 50%, 0.5)`;
+                ctx.lineWidth = 2;
+                const ringSize = 35;
+                // Nuclear visual change: Triangle spin
+                if (isNuc) {
+                    for(let i=0; i<3; i++) {
+                        const ang = i * (Math.PI*2/3);
+                        ctx.beginPath(); ctx.arc(Math.cos(ang)*ringSize, Math.sin(ang)*ringSize, 5, 0, Math.PI*2); ctx.stroke();
+                    }
+                    ctx.beginPath(); ctx.arc(0, 0, ringSize, 0, Math.PI*2); ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ringSize, 0, Math.PI * 0.4); ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ringSize, Math.PI, Math.PI * 1.4); ctx.stroke();
+                }
+                ctx.restore();
+ 
+                ctx.fillStyle = '#150a00';
+                ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = isNuc ? '#0f0' : '#421'; ctx.lineWidth = 2; ctx.stroke();
+ 
+                const startAngle = -Math.PI / 2;
+                const endAngle = startAngle + (Math.PI * 2 * loadPct);
+                ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'butt';
+                ctx.beginPath();
+                ctx.arc(0, 0, 22, startAngle, endAngle);
+                ctx.stroke();
+ 
+                ctx.save();
+                ctx.rotate(-s.rotation); 
+                ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+                 
+                // Nuclear symbol or Fan
+                if (isNuc) {
+                    ctx.beginPath();
+                    for(let i=0; i<3; i++) {
+                        const a = i * (Math.PI*2/3);
+                        ctx.moveTo(0,0);
+                        ctx.arc(0,0, 15, a, a + 1);
+                        ctx.lineTo(0,0);
+                    }
+                    ctx.fill();
+                } else {
+                    const coreSize = 10 + (loadPct * 5); 
+                    ctx.beginPath();
+                    for(let i=0; i<6; i++) {
+                        const ang = (Math.PI/3) * i;
+                        ctx.lineTo(Math.cos(ang)*coreSize, Math.sin(ang)*coreSize);
+                    }
+                    ctx.fill();
+                }
+                ctx.restore();
+ 
+                if (s.heat > 0) {
+                    ctx.fillStyle = '#330000';
+                    ctx.fillRect(-20, -45, 40, 6);
+                    ctx.fillStyle = s.heat > 80 ? '#fff' : '#ff0000';
+                    ctx.fillRect(-20, -45, 40 * (s.heat/CONFIG.maxHeat), 6);
+                }
+ 
+                ctx.restore();
+            });
+             
+            pylons.forEach(p => {
+                if (!isInView(p.x, p.y, 15)) return;
+                const scale = p.spawnScale || 1;
+                ctx.save(); ctx.translate(p.x, p.y); ctx.scale(scale, scale);
+                let color = p.powered ? CONFIG.colors.powerOn : CONFIG.colors.powerOff;
+                if (p === hoveredEntity) color = CONFIG.colors.deleteHighlight;
+                ctx.fillStyle = color; 
+                ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.rect(-3, -3, 6, 6); ctx.fill();
+                ctx.restore();
+            });
+ 
+            houses.forEach(h => {
+                if (!isInView(h.x, h.y, 30)) return;
+                const scale = h.spawnScale || 1;
+                ctx.save(); ctx.translate(h.x, h.y); ctx.scale(scale, scale);
+                 
+                if (h.type === 'factory') {
+                    // --- Factory ---
+                    let color = h.powered ? CONFIG.colors.factoryHappy : CONFIG.colors.factoryOff;
+                    if (h.isCritical) color = CONFIG.colors.houseAngry;
+                     
+                    if (h.isCritical) { ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2; ctx.strokeRect(-25, -25, 50, 50); }
+                    if (h.isAlert) { const t = Date.now(); ctx.translate(Math.sin(t/20)*2, Math.cos(t/15)*2); }
+ 
+                    ctx.fillStyle = color; ctx.fillRect(-15, -15, 30, 30);
+                    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(15, 15); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(15, -15); ctx.lineTo(-15, 15); ctx.stroke();
+ 
+                } else if (h.type === 'commercial') {
+                    // --- Commercial ---
+                    let color = h.powered ? CONFIG.colors.commHappy : CONFIG.colors.commOff;
+                    if (h.isCritical) color = CONFIG.colors.houseAngry;
+ 
+                    if (h.isCritical) { ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0,0,30,0,Math.PI*2); ctx.stroke(); }
+                     
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    for(let i=0; i<6; i++) { const a = i*Math.PI/3; ctx.lineTo(Math.cos(a)*18, Math.sin(a)*18); }
+                    ctx.closePath(); ctx.fill();
+                     
+                    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2;
+                    ctx.stroke();
+ 
+                    // Load Indicator
+                    if (h.powered) {
+                        const loadPct = ((h.currentLoad || CONFIG.commBaseLoad) - CONFIG.commBaseLoad) / (CONFIG.commPeakLoad - CONFIG.commBaseLoad);
+                        const barHeight = 24;
+                        ctx.fillStyle = '#001133'; ctx.fillRect(24, -12, 6, barHeight);
+                        ctx.fillStyle = '#00ffff';
+                        if (loadPct > 0.8 && Math.floor(Date.now()/100)%2===0) ctx.fillStyle = '#fff';
+                        const fillH = barHeight * Math.max(0.1, loadPct);
+                        ctx.fillRect(24, 12 - fillH, 6, fillH);
+                        ctx.strokeStyle = '#0088ff'; ctx.lineWidth = 1; ctx.strokeRect(24, -12, 6, barHeight);
+                    }
+ 
+                } else {
+                    // --- House ---
+                    let color = h.powered ? CONFIG.colors.houseHappy : CONFIG.colors.houseOff;
+                    if (h.isCritical) color = CONFIG.colors.houseAngry;
+                    if (h.isCritical) { ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI*2); ctx.stroke(); }
+                    if (h.isAlert) { const t = Date.now(); ctx.translate(Math.sin(t/20 + h.id*10)*2, Math.cos(t/15 + h.id*10)*2); }
+                    ctx.fillStyle = color; 
+                    ctx.beginPath(); for (let i=0; i<6; i++) { const ang=(Math.PI*2*i)/6; ctx.lineTo(Math.cos(ang)*15, Math.sin(ang)*15); } ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#000'; ctx.beginPath(); for (let i=0; i<6; i++) { const ang=(Math.PI*2*i)/6; ctx.lineTo(Math.cos(ang)*8, Math.sin(ang)*8); } ctx.fill();
+                }
+ 
+                if (!h.powered) {
+                    ctx.strokeStyle = h.isCritical ? '#ff0000' : (h.isAlert ? '#ff5500' : '#888'); 
+                    ctx.lineWidth = 4; 
+                    ctx.beginPath();
+                    const endAngle = (h.patience / CONFIG.houseMaxPatience) * Math.PI * 2 - Math.PI/2;
+                    ctx.arc(0, 0, 20, -Math.PI/2, endAngle); ctx.stroke();
+                }
+                ctx.restore();
+            });
+ 
+            ctx.globalCompositeOperation = 'lighter';
+            particles.forEach(p => {
+                if (!isInView(p.x, p.y, p.size * 2 + 60)) return; 
+                if (p.type === 'shockwave') {
+                      ctx.strokeStyle = p.color; ctx.lineWidth = 3; ctx.globalAlpha = p.life;
+                      ctx.beginPath(); ctx.arc(p.x, p.y, (1.0 - p.life) * 60, 0, Math.PI*2); ctx.stroke();
+                } else {
+                    ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI*2); ctx.fill();
+                }
+            });
+            ctx.globalAlpha = 1; 
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.restore(); 
+ 
+            requestAnimationFrame(renderLoop);
+        }
+ 
+        function renderLoop(timestamp) {
+            update(timestamp);
+            draw();
+        }
+ 
+        // 启动游戏
+        resize(); 
+        restartGame();
+        setupBuildingButtons();
+        updateFullscreenButton();
+        requestAnimationFrame(renderLoop);
+         
+        // 显示初始帮助
+        setTimeout(() => {
+            showHelpTip("点击建筑按钮放置，左键连线，右键拆除", 5000);
+        }, 1000);
+    </script>
+</body>
+</html>
