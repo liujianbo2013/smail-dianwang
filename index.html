@@ -4505,11 +4505,16 @@
         requestAnimationFrame(renderLoop);
 
         // 显示难度选择弹窗
-        // Note: Game will start when user selects a difficulty
-         
-        // 显示初始帮助
+        const difficultyModal = document.getElementById('difficulty-modal');
+        if (difficultyModal) {
+            difficultyModal.classList.remove('hidden');
+        }
+
+        // 显示初始帮助（在用户选择难度后）
         setTimeout(() => {
-            showHelpTip("点击建筑按钮放置，左键连线，右键拆除", 5000);
+            if (gameState.mode) { // Only show help after difficulty is selected
+                showHelpTip("点击建筑按钮放置，左键连线，右键拆除", 5000);
+            }
         }, 1000);
     </script>
 </body>
