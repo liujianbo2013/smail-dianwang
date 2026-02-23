@@ -1784,43 +1784,43 @@
                 return `${secs}秒`;
             }
         }
-        
-                // --- Difficulty Selection System ---
-                function selectDifficulty(mode) {
-                    gameState.mode = mode;
-                    const modal = document.getElementById('difficulty-modal');
-                    modal.classList.add('hidden');
-        
-                    // Apply difficulty modifiers
-                    switch(mode) {
-                        case 'beginner':
-                            gameState.difficultyMultiplier = CONFIG.difficultyBeginnerMoneyMult;
-                            CONFIG.peakHourInterval = CONFIG.peakHourInterval / CONFIG.difficultyBeginnerPeakFreqMult;
-                            CONFIG.nuclearFailureChance *= CONFIG.difficultyBeginnerFailureMult;
-                            CONFIG.initialMoney = 200 * CONFIG.difficultyBeginnerMoneyMult;
-                            setSystemMsg("难度：新手模式", "info");
-                            break;
-                        case 'normal':
-                            gameState.difficultyMultiplier = 1.0;
-                            CONFIG.peakHourInterval = 300000;
-                            CONFIG.nuclearFailureChance = 0.05;
-                            CONFIG.initialMoney = 200;
-                            setSystemMsg("难度：普通模式", "info");
-                            break;
-                        case 'expert':
-                            gameState.difficultyMultiplier = CONFIG.difficultyExpertMoneyMult;
-                            CONFIG.peakHourInterval = CONFIG.peakHourInterval / CONFIG.difficultyExpertPeakFreqMult;
-                            CONFIG.nuclearFailureChance *= CONFIG.difficultyExpertFailureMult;
-                            CONFIG.initialMoney = 200 * CONFIG.difficultyExpertMoneyMult;
-                            setSystemMsg("难度：专家模式", "warning");
-                            break;
-                    }
-        
-                    // Start the game with selected difficulty
-                    restartGame();
-                }
-        
-                function restartGame() {            gameOver = false; money = CONFIG.initialMoney; currentNetIncome = 0;
+
+        // --- Difficulty Selection System ---
+        function selectDifficulty(mode) {
+            gameState.mode = mode;
+            const modal = document.getElementById('difficulty-modal');
+            modal.classList.add('hidden');
+
+            // Apply difficulty modifiers
+            switch(mode) {
+                case 'beginner':
+                    gameState.difficultyMultiplier = CONFIG.difficultyBeginnerMoneyMult;
+                    CONFIG.peakHourInterval = CONFIG.peakHourInterval / CONFIG.difficultyBeginnerPeakFreqMult;
+                    CONFIG.nuclearFailureChance *= CONFIG.difficultyBeginnerFailureMult;
+                    CONFIG.initialMoney = 200 * CONFIG.difficultyBeginnerMoneyMult;
+                    setSystemMsg("难度：新手模式", "info");
+                    break;
+                case 'normal':
+                    gameState.difficultyMultiplier = 1.0;
+                    CONFIG.peakHourInterval = 300000;
+                    CONFIG.nuclearFailureChance = 0.05;
+                    CONFIG.initialMoney = 200;
+                    setSystemMsg("难度：普通模式", "info");
+                    break;
+                case 'expert':
+                    gameState.difficultyMultiplier = CONFIG.difficultyExpertMoneyMult;
+                    CONFIG.peakHourInterval = CONFIG.peakHourInterval / CONFIG.difficultyExpertPeakFreqMult;
+                    CONFIG.nuclearFailureChance *= CONFIG.difficultyExpertFailureMult;
+                    CONFIG.initialMoney = 200 * CONFIG.difficultyExpertMoneyMult;
+                    setSystemMsg("难度：专家模式", "warning");
+                    break;
+            }
+
+            // Start the game with selected difficulty
+            restartGame();
+        }
+
+        function restartGame() {            gameOver = false; money = CONFIG.initialMoney; currentNetIncome = 0;
             sources = []; pylons = []; houses = []; batteries = []; links = []; particles = [];
             totalSpawns = 0; currentScale = CONFIG.initialScale;
             dragStartNode = null; snapTarget = null; CONFIG.maxAngryHouses = 5;
