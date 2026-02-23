@@ -1820,6 +1820,9 @@
             restartGame();
         }
 
+        // Make function available globally for onclick handlers
+        window.selectDifficulty = selectDifficulty;
+
         function restartGame() {            gameOver = false; money = CONFIG.initialMoney; currentNetIncome = 0;
             sources = []; pylons = []; houses = []; batteries = []; links = []; particles = [];
             totalSpawns = 0; currentScale = CONFIG.initialScale;
