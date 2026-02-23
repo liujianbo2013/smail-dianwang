@@ -745,6 +745,79 @@
                 line-height: 1.5;
             }
 
+            /* 排行榜模态框 */
+            .leaderboard-modal {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 2000;
+            }
+
+            .leaderboard-modal .modal-content {
+                background: rgba(0, 20, 40, 0.95);
+                border: 2px solid #00ffff;
+                border-radius: 15px;
+                padding: 30px;
+                min-width: 350px;
+                max-width: 450px;
+                box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+                backdrop-filter: blur(10px);
+            }
+
+            .leaderboard-modal h2 {
+                margin: 0 0 20px 0;
+                font-size: 28px;
+                color: #00ffff;
+                text-align: center;
+                text-shadow: 0 0 20px #00ffff;
+            }
+
+            .record-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0;
+                border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            }
+
+            .record-row:last-child {
+                border-bottom: none;
+            }
+
+            .record-label {
+                color: #88aaff;
+                font-size: 16px;
+            }
+
+            .record-value {
+                color: #ffd700;
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            .leaderboard-modal .close-btn {
+                background: linear-gradient(135deg, #0088aa, #00ffff);
+                border: none;
+                color: #000;
+                padding: 10px 30px;
+                font-size: 16px;
+                font-family: inherit;
+                font-weight: bold;
+                cursor: pointer;
+                border-radius: 25px;
+                margin-top: 20px;
+                width: 100%;
+                transition: all 0.3s ease;
+            }
+
+            .leaderboard-modal .close-btn:hover {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            }
+
 
         }
     </style>
@@ -863,6 +936,21 @@
                 <span class="icon">🗼</span>
                 <span class="label">电塔</span>
                 <span class="price">$100</span>
+            </div>
+            <div class="building-btn repair" data-type="repair" onclick="enterPlacementMode('repair')">
+                <span class="icon">🔧</span>
+                <span class="label">维修站</span>
+                <span class="price">$2000</span>
+            </div>
+            <div class="building-btn dispatch" data-type="dispatch" onclick="enterPlacementMode('dispatch')">
+                <span class="icon">🎛️</span>
+                <span class="label">调度中心</span>
+                <span class="price">$3500</span>
+            </div>
+            <div class="building-btn energystorage" data-type="energystorage" onclick="enterPlacementMode('energystorage')">
+                <span class="icon">⚡</span>
+                <span class="label">储能站</span>
+                <span class="price">$4000</span>
             </div>
         </div>
         <div class="game-controls">
@@ -2075,7 +2163,7 @@
 
         function demolishBuilding(entity) {
             // Remove from appropriate array
-            if (entity.variant && ['plant', 'nuclear', 'wind', 'solar'].includes(entity.variant)) {
+            if (entity.variant && ['plant', 'nuclear', 'wind', 'solar', 'repair', 'dispatch', 'energystorage'].includes(entity.variant)) {
                 const index = sources.indexOf(entity);
                 if (index > -1) {
                     sources.splice(index, 1);
@@ -2105,6 +2193,9 @@
             else if (entity.variant === 'nuclear') refund = CONFIG.costNuclear * CONFIG.refundRate;
             else if (entity.variant === 'wind') refund = CONFIG.costWind * CONFIG.refundRate;
             else if (entity.variant === 'solar') refund = CONFIG.costSolar * CONFIG.refundRate;
+            else if (entity.variant === 'repair') refund = CONFIG.costRepairStation * CONFIG.refundRate;
+            else if (entity.variant === 'dispatch') refund = CONFIG.costDispatchCenter * CONFIG.refundRate;
+            else if (entity.variant === 'energystorage') refund = CONFIG.costEnergyStorage * CONFIG.refundRate;
             else if (entity.type === 'battery') refund = CONFIG.costBattery * CONFIG.refundRate;
             else if (entity.type === 'pylon' || entity.variant === 'tower') refund = CONFIG.costPylon * CONFIG.refundRate;
 
@@ -2143,10 +2234,12 @@
             // Get current view bounds
             const viewWidth = width / currentScale;
             const viewHeight = height / currentScale;
-            const minX = -viewWidth / 2 - CONFIG.windEdgeDistance;
-            const maxX = viewWidth / 2 + CONFIG.windEdgeDistance;
-            const minY = -viewHeight / 2 - CONFIG.windEdgeDistance;
-            const maxY = viewHeight / 2 + CONFIG.windEdgeDistance;
+
+            // Calculate bounds based on view center (viewOffsetX, viewOffsetY)
+            const minX = viewOffsetX - viewWidth / 2;
+            const maxX = viewOffsetX + viewWidth / 2;
+            const minY = viewOffsetY - viewHeight / 2;
+            const maxY = viewOffsetY + viewHeight / 2;
 
             // Check if position is within edge distance from any edge
             const distToLeft = Math.abs(worldX - minX);
@@ -2316,11 +2409,10 @@
                 setSystemMsg(`电池已建造 (-$${cost})`, "success", true);
                 createExplosion(worldX, worldY, '#00ff00', 15);
             } else if (type === 'repair') {
-                // Maintenance Station
+                // Maintenance Station - Check unlock condition first
                 if (houses.length < CONFIG.repairStationUnlockPop) {
                     createShockwave(worldX, worldY, '#ff3333');
                     setSystemMsg(`维修站需要人口≥${CONFIG.repairStationUnlockPop}`, "warning", true);
-                    money += cost; // Refund
                     return;
                 }
                 sources.push({
@@ -2336,11 +2428,10 @@
                 setSystemMsg(`维修站已建造！维护费-${CONFIG.repairStationMaintenanceReduction * 100}%`, "success", true);
                 createExplosion(worldX, worldY, '#00ff88', 20);
             } else if (type === 'dispatch') {
-                // Dispatch Center
+                // Dispatch Center - Check unlock condition first
                 if (houses.length < CONFIG.dispatchCenterUnlockPop) {
                     createShockwave(worldX, worldY, '#ff3333');
                     setSystemMsg(`调度中心需要人口≥${CONFIG.dispatchCenterUnlockPop}`, "warning", true);
-                    money += cost; // Refund
                     return;
                 }
                 sources.push({
@@ -2356,11 +2447,10 @@
                 setSystemMsg(`调度中心已建造！可切换供电优先级`, "success", true);
                 createExplosion(worldX, worldY, '#ffaa00', 20);
             } else if (type === 'energystorage') {
-                // Energy Storage Station
+                // Energy Storage Station - Check unlock condition first
                 if (batteries.length < CONFIG.energyStorageUnlockBatteryCount) {
                     createShockwave(worldX, worldY, '#ff3333');
                     setSystemMsg(`储能站需要至少${CONFIG.energyStorageUnlockBatteryCount}个电池`, "warning", true);
-                    money += cost; // Refund
                     return;
                 }
                 sources.push({
@@ -2876,11 +2966,7 @@
         }
 
         function calculateTransmissionLoss(distance, isHighVoltage) {
-            if (isHighVoltage) return 0; // High voltage has no loss
-            if (distance <= CONFIG.wireLossThreshold150) return 0;
-            if (distance <= CONFIG.wireLossThreshold200) return CONFIG.wireLoss150;
-            if (distance <= CONFIG.wireLossThreshold300) return CONFIG.wireLoss200;
-            return CONFIG.wireLoss300; // >300 units
+            return 0; // Disabled transmission loss
         }
  
         function tryBuildPylon(x, y, parentNode, cost, isHV = false) {
@@ -3129,6 +3215,19 @@
 
             // Save to localStorage
             localStorage.setItem('neonGridRecords', JSON.stringify(gameState.records));
+        }
+
+        function formatTime(ms) {
+            if (!ms) return '0秒';
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}天${hours % 24}小时`;
+            if (hours > 0) return `${hours}小时${minutes % 60}分钟`;
+            if (minutes > 0) return `${minutes}分钟${seconds % 60}秒`;
+            return `${seconds}秒`;
         }
 
         function showLeaderboard() {
@@ -3810,32 +3909,32 @@
                     });
         
                     if (brokenLinks.length > 0) {
-                        // Check for cascade failures
-                        brokenLinks.forEach(brokenLink => {
-                            if (Math.random() < CONFIG.wireCascadeChance) {
-                                // Find adjacent links
-                                const adjacentLinks = links.filter(l => {
-                                    return (l.from === brokenLink.from || l.to === brokenLink.to ||
-                                            l.from === brokenLink.to || l.to === brokenLink.from) &&
-                                           l !== brokenLink &&
-                                           !brokenLinks.includes(l) &&
-                                           l.cascadeCooldown <= 0;
-                                });
+                        // Check for cascade failures - DISABLED
+                        // brokenLinks.forEach(brokenLink => {
+                        //     if (Math.random() < CONFIG.wireCascadeChance) {
+                        //         // Find adjacent links
+                        //         const adjacentLinks = links.filter(l => {
+                        //             return (l.from === brokenLink.from || l.to === brokenLink.to ||
+                        //                     l.from === brokenLink.to || l.to === brokenLink.from) &&
+                        //                    l !== brokenLink &&
+                        //                    !brokenLinks.includes(l) &&
+                        //                    l.cascadeCooldown <= 0;
+                        //         });
 
-                                adjacentLinks.forEach(adjLink => {
-                                    // Trigger cascade overload
-                                    adjLink.heat += CONFIG.maxHeat * 0.7; // Immediate overload
-                                    adjLink.cascadeCooldown = 5000; // 5 second cooldown
-                                    createExplosion((adjLink.from.x + adjLink.to.x) / 2,
-                                                   (adjLink.from.y + adjLink.to.y) / 2,
-                                                   '#ff8800', 15);
-                                });
+                        //         adjacentLinks.forEach(adjLink => {
+                        //             // Trigger cascade overload
+                        //             adjLink.heat += CONFIG.maxHeat * 0.7; // Immediate overload
+                        //             adjLink.cascadeCooldown = 5000; // 5 second cooldown
+                        //             createExplosion((adjLink.from.x + adjLink.to.x) / 2,
+                        //                            (adjLink.from.y + adjLink.to.y) / 2,
+                        //                            '#ff8800', 15);
+                        //         });
 
-                                if (adjacentLinks.length > 0) {
-                                    setSystemMsg("链路过载连锁反应！", "error");
-                                }
-                            }
-                        });
+                        //         if (adjacentLinks.length > 0) {
+                        //             setSystemMsg("链路过载连锁反应！", "error");
+                        //         }
+                        //     }
+                        // });
 
                         links = links.filter(l => !brokenLinks.includes(l));
                         updatePowerGrid();
