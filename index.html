@@ -532,11 +532,161 @@
                 -webkit-overflow-scrolling: touch;
             }
              
-            .buildings-toolbar::-webkit-scrollbar { 
-                display: none; 
+            .buildings-toolbar::-webkit-scrollbar {
+                display: none;
             }
- 
- 
+
+            /* 难度选择弹窗 */
+            #difficulty-modal {
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0, 0, 0, 0.95);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 100;
+                opacity: 1;
+                pointer-events: all;
+                transition: opacity 0.5s ease;
+                backdrop-filter: blur(10px);
+            }
+
+            #difficulty-modal.hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            #difficulty-modal h2 {
+                font-size: 32px;
+                color: #00ffff;
+                margin: 0 0 30px 0;
+                letter-spacing: 5px;
+                text-shadow: 0 0 30px #00ffff;
+            }
+
+            .difficulty-options {
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .difficulty-btn {
+                background: rgba(0, 40, 60, 0.8);
+                border: 2px solid #0088aa;
+                color: #00ffff;
+                padding: 20px 30px;
+                font-size: 16px;
+                font-family: inherit;
+                cursor: pointer;
+                border-radius: 10px;
+                transition: all 0.3s ease;
+                min-width: 150px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .difficulty-btn:hover {
+                background: rgba(0, 100, 150, 0.9);
+                border-color: #00ffff;
+                transform: scale(1.05);
+                box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            }
+
+            .difficulty-btn .difficulty-name {
+                font-size: 20px;
+                font-weight: bold;
+            }
+
+            .difficulty-btn .difficulty-desc {
+                font-size: 12px;
+                color: #88aaff;
+                text-align: center;
+            }
+
+            .difficulty-btn.beginner { border-color: #00ff88; }
+            .difficulty-btn.beginner:hover { box-shadow: 0 0 30px rgba(0, 255, 136, 0.3); }
+
+            .difficulty-btn.normal { border-color: #00ffff; }
+
+            .difficulty-btn.expert { border-color: #ff6600; }
+            .difficulty-btn.expert:hover { box-shadow: 0 0 30px rgba(255, 102, 0, 0.3); }
+
+            /* 右键菜单 */
+            .context-menu {
+                position: fixed;
+                background: rgba(0, 20, 40, 0.95);
+                border: 2px solid #00ffff;
+                border-radius: 10px;
+                padding: 10px;
+                min-width: 200px;
+                z-index: 1000;
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+                backdrop-filter: blur(10px);
+            }
+
+            .context-menu h3 {
+                margin: 0 0 10px 0;
+                font-size: 14px;
+                color: #00ffff;
+                text-align: center;
+                border-bottom: 1px solid #0088aa;
+                padding-bottom: 5px;
+            }
+
+            .context-menu-btn {
+                background: transparent;
+                border: 1px solid #0088aa;
+                color: #00ffff;
+                padding: 8px 12px;
+                margin: 5px 0;
+                font-size: 13px;
+                font-family: inherit;
+                cursor: pointer;
+                border-radius: 5px;
+                transition: all 0.2s ease;
+                width: 100%;
+                text-align: left;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .context-menu-btn:hover {
+                background: rgba(0, 100, 150, 0.5);
+                border-color: #00ffff;
+                transform: translateX(5px);
+            }
+
+            .context-menu-btn .cost {
+                color: #ffd700;
+                font-size: 11px;
+            }
+
+            .context-menu-btn.danger {
+                border-color: #ff4444;
+                color: #ff4444;
+            }
+
+            .context-menu-btn.danger:hover {
+                background: rgba(255, 68, 68, 0.2);
+                border-color: #ff6666;
+            }
+
+            .context-menu-info {
+                color: #88aaff;
+                font-size: 12px;
+                padding: 10px;
+                border: 1px solid #006688;
+                border-radius: 5px;
+                margin: 10px 0;
+                line-height: 1.5;
+            }
+
+
         }
     </style>
 </head>
@@ -548,6 +698,10 @@
             <div class="stat-item" id="peak-hour-indicator" style="display: none;">
                 <span class="stat-label">⚡ 用电高峰</span>
                 <span class="stat-value" style="color: #ff6600;">+50%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">🕐 时间</span>
+                <span class="stat-value" id="time-display">00:00</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">资金</span>
@@ -596,6 +750,25 @@
             </div>
             <button class="restart-btn" onclick="restartGame()">重启系统</button>
         </div>
+
+        <!-- 难度选择弹窗 -->
+        <div id="difficulty-modal">
+            <h2>🎮 选择游戏难度</h2>
+            <div class="difficulty-options">
+                <button class="difficulty-btn beginner" onclick="selectDifficulty('beginner')">
+                    <span class="difficulty-name">🌱 新手</span>
+                    <span class="difficulty-desc">初始资金+50%<br>高峰频率-50%<br>故障概率-50%</span>
+                </button>
+                <button class="difficulty-btn normal" onclick="selectDifficulty('normal')">
+                    <span class="difficulty-name">⚡ 普通</span>
+                    <span class="difficulty-desc">标准游戏体验<br>平衡的游戏参数</span>
+                </button>
+                <button class="difficulty-btn expert" onclick="selectDifficulty('expert')">
+                    <span class="difficulty-name">🔥 专家</span>
+                    <span class="difficulty-desc">初始资金-30%<br>高峰频率+50%<br>故障概率+50%</span>
+                </button>
+            </div>
+        </div>
          
         <canvas id="gameCanvas"></canvas>
     </div>
@@ -637,6 +810,9 @@
             <button class="control-btn" onclick="saveGame()" title="保存游戏">💾</button>
             <button class="control-btn" onclick="loadGame()" title="读取游戏">📂</button>
             <button class="control-btn" onclick="shareGame()" title="分享游戏">🔗</button>
+            <button class="control-btn" onclick="runSystemCheck()" title="系统检测">🔍</button>
+            <button class="control-btn" onclick="takeGridSnapshot()" title="截图分享">📷</button>
+            <button class="control-btn" onclick="showLeaderboard()" title="排行榜">🏆</button>
         </div>
         <div class="speed-controls">
             <button class="speed-btn" onclick="setTimeScale(0)">⏸</button>
@@ -660,7 +836,22 @@
         const replaySlider = document.getElementById('replay-slider');
  
         // Prevent Context Menu on Canvas
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const worldPos = toWorld(mouseX, mouseY);
+            const entity = getEntityAt(worldPos.x, worldPos.y);
+
+            if (entity) {
+                showContextMenu(e.clientX, e.clientY, entity);
+            } else if (placementMode) {
+                exitPlacementMode();
+            }
+        });
  
         // --- Game Constants & Config ---
         const CONFIG = {
@@ -700,6 +891,86 @@
             nuclearUpkeep: 50,
             nuclearFailureChance: 0.05, // 5% per minute
             nuclearDecayRate: 5, // 5 capacity per hour
+            nuclearCoolingBatteryCount: 2, // Required batteries for cooling
+            nuclearCoolingFailureRate: 0.15, // 15% per minute if cooling insufficient
+            nuclearMaintenanceUpgradeCost: 3000, // Cost for maintenance upgrade
+            nuclearMaintenanceDuration: 3600000, // 1 hour in ms
+
+            // Wind Power Settings
+            costWind: 2000,
+            windCapacity: 12.5, // Average of 10-15
+            windUpkeep: 0,
+            windSpeedEventChance: 0.10, // 10% per minute
+            windSpeedBoost: 0.80, // +80% efficiency
+            windSpeedDrop: 0.50, // -50% efficiency
+            windEdgeOnly: true, // Can only place at map edges
+            windEdgeDistance: 200, // Distance from edge to allow placement
+
+            // Solar Power Settings
+            costSolar: 2500,
+            solarCapacity: 10, // Average of 8-12
+            solarUpkeep: 0,
+            solarStorageUpgradeCost: 1500, // Cost for storage upgrade
+            solarStorageEfficiency: 0.20, // 20% efficiency at night with upgrade
+            solarDayStart: 6, // 6 AM
+            solarDayEnd: 18, // 6 PM
+            solarDawnDuration: 1, // 1 hour transition
+            solarDuskDuration: 1, // 1 hour transition
+
+            // Wire Loss Settings
+            wireLossThreshold150: 150,
+            wireLossThreshold200: 200,
+            wireLossThreshold300: 300,
+            wireLoss150: 0.10, // 10% loss for 150-200
+            wireLoss200: 0.30, // 30% loss for 200-300
+            wireLoss300: 0.50, // 50% loss for >300
+            highVoltageTowerSpacing: 200, // Require tower every 200 units
+
+            // Event Settings
+            wireCascadeChance: 0.20, // 20% chance of cascade failure
+            lowDemandEventChance: 0.30, // 30% chance when conditions met
+            maintenanceEventChance: 0.05, // 5% per minute
+            disasterEventChance: 0.01, // 1% per minute
+            disasterPopThreshold: 300, // Population threshold for disasters
+            cleanEnergySubsidyThreshold: 0.50, // 50% clean energy ratio
+
+            // Difficulty Settings
+            difficultyBeginnerMoneyMult: 1.5,
+            difficultyBeginnerPeakFreqMult: 0.5,
+            difficultyBeginnerFailureMult: 0.5,
+            difficultyExpertMoneyMult: 0.7,
+            difficultyExpertPeakFreqMult: 1.5,
+            difficultyExpertFailureMult: 1.5,
+            difficultyExpertDepreciationRate: 0.10, // 10% per hour
+            difficultyInflationThreshold: 500, // Population threshold for inflation
+            difficultyInflationRate: 0.0001, // Increase per frame
+
+            // New Buildings
+            costRepairStation: 2000,
+            repairStationUnlockPop: 150,
+            repairStationMaintenanceReduction: 0.20,
+
+            costDispatchCenter: 3500,
+            dispatchCenterUnlockPop: 250,
+
+            costEnergyStorage: 4000,
+            energyStorageUnlockBatteryCount: 8,
+            energyStorageCapacityMultiplier: 5,
+            energyStorageChargeRateMultiplier: 1.5,
+
+            // Achievement Thresholds
+            achievementPowerPioneerPop: 100,
+            achievementPowerPioneerReward: 1000,
+            achievementCleanEnergyRatio: 0.70,
+            achievementCleanEnergyDiscount: 0.10,
+            achievementCrisisExpertCount: 5,
+            achievementCrisisExpertDiscount: 0.20,
+
+            // Tech Tree
+            techSmartGridCost: 100000,
+            techSmartGridOverloadReduction: 0.15,
+            techNuclearTechRequirement: 5,
+            techNuclearTechFailureRate: 0.02
              
             costWirePerUnit: 0.1,
             costUpgradeMult: 6.0, 
@@ -823,6 +1094,13 @@
         let lastTouchX = 0, lastTouchY = 0;
         let isPanning = false;
         let isZooming = false;
+
+        // 长按批量选择
+        let longPressTimer = null;
+        let longPressDuration = 800; // 800ms 长按触发
+        let longPressStartPos = null;
+        let isLongPressActive = false;
+        let selectedEntities = []; // 批量选中的实体
  
         let sources = [];
         let pylons = [];
@@ -846,7 +1124,52 @@
         let nuclearCheckTime = 0;
         let nuclearDecayCheckTime = 0;
         let angryGracePeriods = new Map(); // Track grace periods for angry houses
-         
+
+        // 游戏状态系统
+        let gameState = {
+            // 难度设置
+            mode: 'normal', // normal, beginner, expert
+            difficultyMultiplier: 1.0,
+            
+            // 游戏时间系统（24小时循环）
+            gameDate: 0, // 0-23 小时循环
+            gameDays: 0, // 游戏天数
+            
+            // 活跃事件
+            activeEvents: [], // 当前活跃的事件列表
+            
+            // 成就系统
+            achievements: {
+                powerPioneer: { unlocked: false, progress: 0, target: 100 },
+                cleanEnergyMaster: { unlocked: false, progress: 0, target: 70 },
+                crisisExpert: { unlocked: false, progress: 0, target: 5 }
+            },
+            
+            // 科技树解锁
+            unlockedTech: [],
+            
+            // 记录统计
+            records: {
+                maxPopulation: 0,
+                longestUptime: 0,
+                currentUptime: 0,
+                disasterCount: 0,
+                totalEarnings: 0
+            },
+            
+            // 通货膨胀率
+            inflationRate: 0, // 0-0.05
+            
+            // 故障时间追踪
+            lastFailureTime: 0,
+            
+            // 电网健康度
+            gridHealth: 100, // 0-100%
+            
+            // 一键检测高亮
+            highlightedIssues: []
+        };
+
         let msgState = { text: "系统就绪 - 拖拽建筑到地图上", type: "normal", priority: 0, eventTimer: 0 };
         let lastRenderedMsg = "";
  
@@ -1461,9 +1784,43 @@
                 return `${secs}秒`;
             }
         }
-
-        function restartGame() {
-            gameOver = false; money = CONFIG.initialMoney; currentNetIncome = 0;
+        
+                // --- Difficulty Selection System ---
+                function selectDifficulty(mode) {
+                    gameState.mode = mode;
+                    const modal = document.getElementById('difficulty-modal');
+                    modal.classList.add('hidden');
+        
+                    // Apply difficulty modifiers
+                    switch(mode) {
+                        case 'beginner':
+                            gameState.difficultyMultiplier = CONFIG.difficultyBeginnerMoneyMult;
+                            CONFIG.peakHourInterval = CONFIG.peakHourInterval / CONFIG.difficultyBeginnerPeakFreqMult;
+                            CONFIG.nuclearFailureChance *= CONFIG.difficultyBeginnerFailureMult;
+                            CONFIG.initialMoney = 200 * CONFIG.difficultyBeginnerMoneyMult;
+                            setSystemMsg("难度：新手模式", "info");
+                            break;
+                        case 'normal':
+                            gameState.difficultyMultiplier = 1.0;
+                            CONFIG.peakHourInterval = 300000;
+                            CONFIG.nuclearFailureChance = 0.05;
+                            CONFIG.initialMoney = 200;
+                            setSystemMsg("难度：普通模式", "info");
+                            break;
+                        case 'expert':
+                            gameState.difficultyMultiplier = CONFIG.difficultyExpertMoneyMult;
+                            CONFIG.peakHourInterval = CONFIG.peakHourInterval / CONFIG.difficultyExpertPeakFreqMult;
+                            CONFIG.nuclearFailureChance *= CONFIG.difficultyExpertFailureMult;
+                            CONFIG.initialMoney = 200 * CONFIG.difficultyExpertMoneyMult;
+                            setSystemMsg("难度：专家模式", "warning");
+                            break;
+                    }
+        
+                    // Start the game with selected difficulty
+                    restartGame();
+                }
+        
+                function restartGame() {            gameOver = false; money = CONFIG.initialMoney; currentNetIncome = 0;
             sources = []; pylons = []; houses = []; batteries = []; links = []; particles = [];
             totalSpawns = 0; currentScale = CONFIG.initialScale;
             dragStartNode = null; snapTarget = null; CONFIG.maxAngryHouses = 5;
@@ -1526,6 +1883,171 @@
             for (let h of houses) if (Math.hypot(worldX - h.x, worldY - h.y) < radius) return h;
             return null;
         }
+
+        // --- Context Menu Functions ---
+        function showContextMenu(screenX, screenY, entity) {
+            // Remove any existing context menu
+            const existingMenu = document.querySelector('.context-menu');
+            if (existingMenu) existingMenu.remove();
+
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.style.left = screenX + 'px';
+            menu.style.top = screenY + 'px';
+
+            // Add title based on entity type
+            const title = document.createElement('h3');
+            let entityName = '未知';
+            if (entity.variant === 'plant') entityName = '电厂';
+            else if (entity.variant === 'nuclear') entityName = '核电站';
+            else if (entity.variant === 'wind') entityName = '风力电站';
+            else if (entity.variant === 'solar') entityName = '太阳能电站';
+            else if (entity.type === 'battery') entityName = '电池';
+            else if (entity.type === 'tower') entityName = '电塔';
+            else if (entity.type === 'house') entityName = '住宅';
+            else if (entity.type === 'factory') entityName = '工厂';
+            else if (entity.type === 'commercial') entityName = '商业';
+            title.textContent = entityName;
+            menu.appendChild(title);
+
+            // Add info section
+            const info = document.createElement('div');
+            info.className = 'context-menu-info';
+            if (entity.variant === 'nuclear') {
+                const coolingStatus = entity.coolingSatisfied ? '✅ 冷却充足' : '⚠️ 冷却不足';
+                info.innerHTML = `
+                    容量: ${entity.capacity.toFixed(1)}<br>
+                    负载: ${entity.load.toFixed(1)}<br>
+                    ${coolingStatus}<br>
+                    冷却电池: ${entity.coolingBatteries}/2
+                `;
+            } else if (entity.variant === 'wind') {
+                const windStatus = entity.windSpeedMultiplier > 1 ? '🌪️ 风速提升' : entity.windSpeedMultiplier < 1 ? '🍃 风速降低' : '🌬️ 正常';
+                info.innerHTML = `
+                    容量: ${entity.capacity.toFixed(1)}<br>
+                    负载: ${entity.load.toFixed(1)}<br>
+                    ${windStatus}<br>
+                    效率: ${(entity.windSpeedMultiplier * 100).toFixed(0)}%
+                `;
+            } else if (entity.variant === 'solar') {
+                const solarStatus = entity.hasStorageUpgrade ? '🔋 已升级储能' : '☀️ 无储能升级';
+                info.innerHTML = `
+                    容量: ${entity.capacity.toFixed(1)}<br>
+                    负载: ${entity.load.toFixed(1)}<br>
+                    ${solarStatus}
+                `;
+            } else if (entity.type === 'battery') {
+                info.innerHTML = `
+                    电量: ${entity.energy.toFixed(0)}/${entity.maxEnergy}<br>
+                    负载: ${entity.targetLoad.toFixed(1)}<br>
+                    状态: ${entity.currentOp === 'charge' ? '充电中' : entity.currentOp === 'discharge' ? '放电中' : '待机'}
+                `;
+            } else {
+                info.innerHTML = `
+                    容量: ${entity.capacity ? entity.capacity.toFixed(1) : 'N/A'}<br>
+                    负载: ${entity.load.toFixed(1)}
+                `;
+            }
+            menu.appendChild(info);
+
+            // Add upgrade button for solar
+            if (entity.variant === 'solar' && !entity.hasStorageUpgrade) {
+                const upgradeBtn = document.createElement('button');
+                upgradeBtn.className = 'context-menu-btn';
+                upgradeBtn.innerHTML = `<span>🔋 升级储能板</span><span class="cost">$${CONFIG.solarStorageUpgradeCost}</span>`;
+                upgradeBtn.onclick = () => {
+                    upgradeSolarStorage(entity);
+                    menu.remove();
+                };
+                menu.appendChild(upgradeBtn);
+            }
+
+            // Add maintenance button for nuclear
+            if (entity.variant === 'nuclear' && !entity.maintenanceMode) {
+                const maintainBtn = document.createElement('button');
+                maintainBtn.className = 'context-menu-btn';
+                maintainBtn.innerHTML = `<span>🔧 维护升级</span><span class="cost">$${CONFIG.nuclearMaintenanceUpgradeCost}</span>`;
+                maintainBtn.onclick = () => {
+                    upgradeNuclearMaintenance(entity);
+                    menu.remove();
+                };
+                menu.appendChild(maintainBtn);
+            }
+
+            // Add demolish button
+            const demolishBtn = document.createElement('button');
+            demolishBtn.className = 'context-menu-btn danger';
+            demolishBtn.innerHTML = `<span>🗑️ 拆除</span><span class="cost">-$${Math.floor(CONFIG.costPlant * CONFIG.refundRate)}</span>`;
+            demolishBtn.onclick = () => {
+                demolishBuilding(entity);
+                menu.remove();
+            };
+            menu.appendChild(demolishBtn);
+
+            document.body.appendChild(menu);
+
+            // Close menu when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 0);
+        }
+
+        function upgradeSolarStorage(solar) {
+            if (money >= CONFIG.solarStorageUpgradeCost) {
+                money -= CONFIG.solarStorageUpgradeCost;
+                solar.hasStorageUpgrade = true;
+                setSystemMsg("太阳能储能板升级完成！夜间保留20%发电效率", "success");
+                createExplosion(solar.x, solar.y, '#ffff00', 25);
+            } else {
+                setSystemMsg("资金不足", "warning");
+            }
+        }
+
+        function demolishBuilding(entity) {
+            // Remove from appropriate array
+            if (entity.variant && ['plant', 'nuclear', 'wind', 'solar'].includes(entity.variant)) {
+                const index = sources.indexOf(entity);
+                if (index > -1) {
+                    sources.splice(index, 1);
+                }
+                // Also remove from pylons if it's a tower
+                if (entity.variant === 'tower') {
+                    const pylonIndex = pylons.findIndex(p => p.id === entity.id);
+                    if (pylonIndex > -1) pylons.splice(pylonIndex, 1);
+                }
+            } else if (entity.type === 'battery') {
+                const index = batteries.indexOf(entity);
+                if (index > -1) batteries.splice(index, 1);
+            } else if (entity.type === 'pylon') {
+                const index = pylons.indexOf(entity);
+                if (index > -1) pylons.splice(index, 1);
+            } else if (entity.type === 'house' || entity.type === 'factory' || entity.type === 'commercial') {
+                const index = houses.indexOf(entity);
+                if (index > -1) houses.splice(index, 1);
+            }
+
+            // Remove connected links
+            links = links.filter(l => l.from !== entity && l.to !== entity);
+
+            // Refund cost
+            let refund = 0;
+            if (entity.variant === 'plant') refund = CONFIG.costPlant * CONFIG.refundRate;
+            else if (entity.variant === 'nuclear') refund = CONFIG.costNuclear * CONFIG.refundRate;
+            else if (entity.variant === 'wind') refund = CONFIG.costWind * CONFIG.refundRate;
+            else if (entity.variant === 'solar') refund = CONFIG.costSolar * CONFIG.refundRate;
+            else if (entity.type === 'battery') refund = CONFIG.costBattery * CONFIG.refundRate;
+            else if (entity.type === 'pylon' || entity.variant === 'tower') refund = CONFIG.costPylon * CONFIG.refundRate;
+
+            money += refund;
+            setSystemMsg(`已拆除，返还 $${Math.floor(refund)}`, "info");
+            createExplosion(entity.x, entity.y, '#ff6666', 20);
+            updatePowerGrid();
+        }
  
         function distToSegment(p, v, w) {
             const l2 = (w.x - v.x)**2 + (w.y - v.y)**2;
@@ -1549,6 +2071,28 @@
             for (let b of batteries) if (Math.hypot(worldX - b.x, worldY - b.y) < buffer) return false;
             for (let h of houses) if (Math.hypot(worldX - h.x, worldY - h.y) < buffer) return false;
             return true;
+        }
+
+        function isWindPlacementValid(worldX, worldY) {
+            // Wind turbines can only be placed near the edge of the map
+            // Get current view bounds
+            const viewWidth = width / currentScale;
+            const viewHeight = height / currentScale;
+            const minX = -viewWidth / 2 - CONFIG.windEdgeDistance;
+            const maxX = viewWidth / 2 + CONFIG.windEdgeDistance;
+            const minY = -viewHeight / 2 - CONFIG.windEdgeDistance;
+            const maxY = viewHeight / 2 + CONFIG.windEdgeDistance;
+
+            // Check if position is within edge distance from any edge
+            const distToLeft = Math.abs(worldX - minX);
+            const distToRight = Math.abs(worldX - maxX);
+            const distToTop = Math.abs(worldY - minY);
+            const distToBottom = Math.abs(worldY - maxY);
+
+            return (distToLeft <= CONFIG.windEdgeDistance ||
+                    distToRight <= CONFIG.windEdgeDistance ||
+                    distToTop <= CONFIG.windEdgeDistance ||
+                    distToBottom <= CONFIG.windEdgeDistance);
         }
  
         function getLineIntersection(p1, p2, p3, p4) {
@@ -1584,21 +2128,31 @@
         function placeBuildingAt(worldX, worldY, type) {
             let buffer = 60;
             if (type === 'tower') buffer = 30; // 电塔占用空间更小
-            
+
             if (!isPositionClear(worldX, worldY, buffer)) {
                 createShockwave(worldX, worldY, '#ff3333');
                 setSystemMsg("位置无效", "warning", true);
                 return;
             }
-             
+
+            // Check wind placement restriction
+            if (type === 'wind' && CONFIG.windEdgeOnly && !isWindPlacementValid(worldX, worldY)) {
+                createShockwave(worldX, worldY, '#ff3333');
+                setSystemMsg("风力电站只能放置在地图边缘区域", "warning", true);
+                return;
+            }
+
             let cost = 0;
             if (type === 'plant') cost = CONFIG.costPlant;
             else if (type === 'nuclear') cost = CONFIG.costNuclear;
             else if (type === 'battery') cost = CONFIG.costBattery;
-            else if (type === 'wind') cost = 2000;
-            else if (type === 'solar') cost = 2500;
+            else if (type === 'wind') cost = CONFIG.costWind;
+            else if (type === 'solar') cost = CONFIG.costSolar;
             else if (type === 'tower') cost = 100;
-             
+            else if (type === 'repair') cost = CONFIG.costRepairStation;
+            else if (type === 'dispatch') cost = CONFIG.costDispatchCenter;
+            else if (type === 'energystorage') cost = CONFIG.costEnergyStorage;
+
             if (money < cost) {
                 createShockwave(worldX, worldY, '#ff3333');
                 setSystemMsg("资金不足", "warning", true);
@@ -1610,7 +2164,7 @@
             // 处理发电设施（包括电塔）
             if (type === 'plant' || type === 'nuclear' || type === 'wind' || type === 'solar' || type === 'tower') {
                 let capacity, color, name, upkeep, variant;
-                
+
                 if (type === 'plant') {
                     capacity = CONFIG.plantCapacity;
                     color = '#fff';
@@ -1642,19 +2196,38 @@
                     upkeep = 0;
                     variant = 'tower';
                 }
-                
+
                 const towerId = Math.random();
-                
-                // Add to sources (for grid connection)
-                sources.push({ 
-                    x: worldX, y: worldY, 
-                    radius: type === 'tower' ? 10 : 25, type: type === 'tower' ? 'tower' : 'source', id: towerId, 
-                    load: 0, heat: 0, 
-                    capacity: capacity, 
+
+                // Create base source object
+                let sourceObj = {
+                    x: worldX, y: worldY,
+                    radius: type === 'tower' ? 10 : 25, type: type === 'tower' ? 'tower' : 'source', id: towerId,
+                    load: 0, heat: 0,
+                    capacity: capacity,
                     spawnScale: 0, displayLoad: 0, rotation: 0,
                     variant: variant,
-                    upkeep: upkeep
-                });
+                    upkeep: upkeep,
+                    builtTime: gameState.gameTime
+                };
+
+                // Add type-specific properties
+                if (type === 'wind') {
+                    sourceObj.windSpeedMultiplier = 1.0;
+                    sourceObj.lastWindEvent = 0;
+                } else if (type === 'solar') {
+                    sourceObj.hasStorageUpgrade = false;
+                } else if (type === 'nuclear') {
+                    sourceObj.coolingBatteries = 0;
+                    sourceObj.coolingSatisfied = false;
+                    sourceObj.failureChance = CONFIG.nuclearFailureChance;
+                    sourceObj.needsRepair = false;
+                    sourceObj.maintenanceMode = false;
+                    sourceObj.maintenanceEndTime = 0;
+                }
+
+                // Add to sources (for grid connection)
+                sources.push(sourceObj);
                 
                 // Add to pylons (for rendering as tower)
                 if (type === 'tower') {
@@ -1672,11 +2245,72 @@
                     x: worldX, y: worldY,
                     type: 'battery', id: Math.random(),
                     energy: 0, maxEnergy: CONFIG.batteryCapacity,
-                    spawnScale: 0, powered: false, currentOp: 'idle', 
-                    targetLoad: 0 
+                    spawnScale: 0, powered: false, currentOp: 'idle',
+                    targetLoad: 0
                 });
                 setSystemMsg(`电池已建造 (-$${cost})`, "success", true);
                 createExplosion(worldX, worldY, '#00ff00', 15);
+            } else if (type === 'repair') {
+                // Maintenance Station
+                if (houses.length < CONFIG.repairStationUnlockPop) {
+                    createShockwave(worldX, worldY, '#ff3333');
+                    setSystemMsg(`维修站需要人口≥${CONFIG.repairStationUnlockPop}`, "warning", true);
+                    money += cost; // Refund
+                    return;
+                }
+                sources.push({
+                    x: worldX, y: worldY,
+                    radius: 25, type: 'source', id: Math.random(),
+                    load: 0, heat: 0,
+                    capacity: 0, // Doesn't generate power
+                    spawnScale: 0, displayLoad: 0, rotation: 0,
+                    variant: 'repair',
+                    upkeep: 0,
+                    maintenanceReduction: CONFIG.repairStationMaintenanceReduction
+                });
+                setSystemMsg(`维修站已建造！维护费-${CONFIG.repairStationMaintenanceReduction * 100}%`, "success", true);
+                createExplosion(worldX, worldY, '#00ff88', 20);
+            } else if (type === 'dispatch') {
+                // Dispatch Center
+                if (houses.length < CONFIG.dispatchCenterUnlockPop) {
+                    createShockwave(worldX, worldY, '#ff3333');
+                    setSystemMsg(`调度中心需要人口≥${CONFIG.dispatchCenterUnlockPop}`, "warning", true);
+                    money += cost; // Refund
+                    return;
+                }
+                sources.push({
+                    x: worldX, y: worldY,
+                    radius: 25, type: 'source', id: Math.random(),
+                    load: 0, heat: 0,
+                    capacity: 0, // Doesn't generate power
+                    spawnScale: 0, displayLoad: 0, rotation: 0,
+                    variant: 'dispatch',
+                    upkeep: 0,
+                    priorityMode: 'balanced' // balanced, residential, industrial
+                });
+                setSystemMsg(`调度中心已建造！可切换供电优先级`, "success", true);
+                createExplosion(worldX, worldY, '#ffaa00', 20);
+            } else if (type === 'energystorage') {
+                // Energy Storage Station
+                if (batteries.length < CONFIG.energyStorageUnlockBatteryCount) {
+                    createShockwave(worldX, worldY, '#ff3333');
+                    setSystemMsg(`储能站需要至少${CONFIG.energyStorageUnlockBatteryCount}个电池`, "warning", true);
+                    money += cost; // Refund
+                    return;
+                }
+                sources.push({
+                    x: worldX, y: worldY,
+                    radius: 25, type: 'source', id: Math.random(),
+                    load: 0, heat: 0,
+                    capacity: 0, // Doesn't generate power
+                    spawnScale: 0, displayLoad: 0, rotation: 0,
+                    variant: 'energystorage',
+                    upkeep: 0,
+                    capacityMultiplier: CONFIG.energyStorageCapacityMultiplier,
+                    chargeRateMultiplier: CONFIG.energyStorageChargeRateMultiplier
+                });
+                setSystemMsg(`储能站已建造！电池容量×${CONFIG.energyStorageCapacityMultiplier}，充放电速率×${CONFIG.energyStorageChargeRateMultiplier}`, "success", true);
+                createExplosion(worldX, worldY, '#0088ff', 20);
             }
              
             updatePowerGrid();
@@ -1720,27 +2354,82 @@
                 isZooming = true;
                 touchStartDist = getTouchDistance(e);
                 e.preventDefault();
+                // 清除长按定时器
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
             } else if (e.touches.length === 1) {
                 const touch = e.touches[0];
                 lastTouchX = touch.clientX;
                 lastTouchY = touch.clientY;
-                 
+
                 const rect = canvas.getBoundingClientRect();
                 const x = touch.clientX - rect.left;
                 const y = touch.clientY - rect.top;
-                 
+
                 // 检查是否在实体上
                 const worldPos = toWorld(x, y);
                 const entity = getEntityAt(worldPos.x, worldPos.y);
-                 
-                if (!entity) {
+
+                if (entity) {
+                    // 如果在实体上，启动长按检测
+                    longPressStartPos = { x: worldPos.x, y: worldPos.y };
+                    longPressTimer = setTimeout(() => {
+                        activateLongPressSelection(worldPos.x, worldPos.y);
+                    }, longPressDuration);
+                } else {
                     // 如果不在实体上，可能是拖动视图
                     setTimeout(() => {
-                        if (!input.isDown && !dragStartNode) {
+                        if (!input.isDown && !dragStartNode && !isLongPressActive) {
                             isPanning = true;
                         }
                     }, 100);
                 }
+            }
+        }
+
+        function activateLongPressSelection(worldX, worldY) {
+            isLongPressActive = true;
+
+            // 获取触摸的实体类型
+            const entity = getEntityAt(worldX, worldY);
+            if (!entity) return;
+
+            const entityType = entity.type || entity.variant;
+
+            // 批量选中同类型实体
+            selectedEntities = [];
+
+            // 搜索所有同类型实体
+            sources.forEach(s => {
+                if ((s.type === entityType || s.variant === entityType) &&
+                    Math.hypot(s.x - worldX, s.y - worldY) < 500) { // 500范围内
+                    selectedEntities.push(s);
+                }
+            });
+
+            pylons.forEach(p => {
+                if (p.type === entityType && Math.hypot(p.x - worldX, p.y - worldY) < 500) {
+                    selectedEntities.push(p);
+                }
+            });
+
+            batteries.forEach(b => {
+                if (b.type === entityType && Math.hypot(b.x - worldX, b.y - worldY) < 500) {
+                    selectedEntities.push(b);
+                }
+            });
+
+            houses.forEach(h => {
+                if (h.type === entityType && Math.hypot(h.x - worldX, h.y - worldY) < 500) {
+                    selectedEntities.push(h);
+                }
+            });
+
+            if (selectedEntities.length > 0) {
+                setSystemMsg(`已选中 ${selectedEntities.length} 个${entityType === 'plant' ? '电厂' : entityType === 'wind' ? '风力电站' : entityType === 'solar' ? '太阳能电站' : entityType === 'nuclear' ? '核电站' : entityType === 'battery' ? '电池' : entityType === 'house' ? '住宅' : entityType === 'factory' ? '工厂' : '商业'}`, "info");
+                createExplosion(worldX, worldY, '#00ffff', 30);
             }
         }
  
@@ -1751,7 +2440,12 @@
                 currentScale = Math.max(CONFIG.minScale, Math.min(CONFIG.maxScale, currentScale * scaleFactor));
                 touchStartDist = dist;
                 e.preventDefault();
-            } else if (isPanning && e.touches.length === 1 && !input.isDown) {
+                // 清除长按定时器
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+            } else if (isPanning && e.touches.length === 1 && !input.isDown && !isLongPressActive) {
                 const touch = e.touches[0];
                 const dx = touch.clientX - lastTouchX;
                 const dy = touch.clientY - lastTouchY;
@@ -1760,6 +2454,17 @@
                 lastTouchX = touch.clientX;
                 lastTouchY = touch.clientY;
                 e.preventDefault();
+            } else if (longPressTimer) {
+                // 如果移动距离过大，取消长按
+                const touch = e.touches[0];
+                const dx = touch.clientX - lastTouchX;
+                const dy = touch.clientY - lastTouchY;
+                const moveDist = Math.sqrt(dx * dx + dy * dy);
+
+                if (moveDist > 10) { // 移动超过10像素取消长按
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
             }
         }
  
@@ -1767,6 +2472,21 @@
             if (e.touches.length === 0) {
                 isZooming = false;
                 isPanning = false;
+
+                // 清除长按定时器
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+
+                // 如果长按激活，可以在这里处理后续操作
+                if (isLongPressActive) {
+                    isLongPressActive = false;
+                    // 可以在这里显示批量操作菜单
+                }
+
+                // 清除选中
+                selectedEntities = [];
             }
         }
  
@@ -2066,28 +2786,58 @@
                 return;
             }
             money -= cost;
+
+            // Calculate distance and transmission loss
+            const distance = Math.hypot(nodeB.x - nodeA.x, nodeB.y - nodeA.y);
+            const loss = calculateTransmissionLoss(distance, isHV);
+
             const maxLoad = isHV ? CONFIG.upgradedWireLoad : CONFIG.baseWireLoad;
-            links.push({ 
-                from: nodeA, to: nodeB, 
-                active: false, load: 0, heat: 0, spawnProgress: 0, 
-                maxLoad: maxLoad, upgraded: isHV 
-            }); 
+            links.push({
+                from: nodeA, to: nodeB,
+                active: false, load: 0, heat: 0, spawnProgress: 0,
+                maxLoad: maxLoad, upgraded: isHV,
+                distance: distance,
+                loss: loss,
+                isHighVoltage: isHV,
+                lastOverloadTime: 0,
+                isDamaged: false,
+                cascadeCooldown: 0
+            });
             if (isHV) {
                  createExplosion((nodeA.x + nodeB.x)/2, (nodeA.y + nodeB.y)/2, CONFIG.colors.wireUpgraded, 15);
             }
-            updatePowerGrid(); 
-            setSystemMsg(`已连接 (-$${cost})`, "normal", true);
+            updatePowerGrid();
+            setSystemMsg(`已连接 (-$${cost})${loss > 0 ? ` 损耗${(loss * 100).toFixed(0)}%` : ''}`, "normal", true);
+        }
+
+        function calculateTransmissionLoss(distance, isHighVoltage) {
+            if (isHighVoltage) return 0; // High voltage has no loss
+            if (distance <= CONFIG.wireLossThreshold150) return 0;
+            if (distance <= CONFIG.wireLossThreshold200) return CONFIG.wireLoss150;
+            if (distance <= CONFIG.wireLossThreshold300) return CONFIG.wireLoss200;
+            return CONFIG.wireLoss300; // >300 units
         }
  
         function tryBuildPylon(x, y, parentNode, cost, isHV = false) {
             money -= cost;
-            const newPylon = { x: x, y: y, type: 'pylon', powered: false, id: Math.random(), spawnScale: 0 }; 
+            const newPylon = { x: x, y: y, type: 'pylon', powered: false, id: Math.random(), spawnScale: 0 };
             pylons.push(newPylon);
+
+            // Calculate distance and transmission loss
+            const distance = Math.hypot(x - parentNode.x, y - parentNode.y);
+            const loss = calculateTransmissionLoss(distance, isHV);
+
             const maxLoad = isHV ? CONFIG.upgradedWireLoad : CONFIG.baseWireLoad;
-            links.push({ 
-                from: parentNode, to: newPylon, 
-                active: false, load: 0, heat: 0, spawnProgress: 0, 
-                maxLoad: maxLoad, upgraded: isHV 
+            links.push({
+                from: parentNode, to: newPylon,
+                active: false, load: 0, heat: 0, spawnProgress: 0,
+                maxLoad: maxLoad, upgraded: isHV,
+                distance: distance,
+                loss: loss,
+                isHighVoltage: isHV,
+                lastOverloadTime: 0,
+                isDamaged: false,
+                cascadeCooldown: 0
             });
             createExplosion(x, y, isHV ? CONFIG.colors.wireUpgraded : CONFIG.colors.powerOn, 10);
             updatePowerGrid();
@@ -2143,7 +2893,311 @@
              
             totalSpawns++;
         }
- 
+
+        // --- NEW: Calculate effective capacity for different energy sources ---
+        function checkAchievements() {
+            const population = houses.length;
+
+            // Power Pioneer: Reach 100 population
+            if (!gameState.achievements.powerPioneer.unlocked && population >= CONFIG.achievementPowerPioneerPop) {
+                gameState.achievements.powerPioneer.unlocked = true;
+                money += CONFIG.achievementPowerPioneerReward;
+                setSystemMsg(`🏆 成就解锁：电力先驱！获得 ${CONFIG.achievementPowerPioneerReward}`, "success", true);
+                createExplosion(0, 0, '#ffd700', 40);
+            }
+
+            // Clean Energy Master: Clean energy ratio >= 70%
+            if (!gameState.achievements.cleanEnergyMaster.unlocked) {
+                const cleanEnergySources = sources.filter(s =>
+                    ['wind', 'solar'].includes(s.variant)
+                ).length;
+                const totalSources = sources.length;
+                const cleanRatio = totalSources > 0 ? cleanEnergySources / totalSources : 0;
+
+                if (cleanRatio >= CONFIG.achievementCleanEnergyRatio) {
+                    gameState.achievements.cleanEnergyMaster.unlocked = true;
+                    // Apply discount
+                    CONFIG.costWind *= (1 - CONFIG.achievementCleanEnergyDiscount);
+                    CONFIG.costSolar *= (1 - CONFIG.achievementCleanEnergyDiscount);
+                    setSystemMsg(`🏆 成就解锁：清洁能源大师！风力/太阳能成本-10%`, "success", true);
+                    createExplosion(0, 0, '#88ffff', 40);
+                }
+            }
+
+            // Crisis Expert: Survive 5 disasters
+            if (!gameState.achievements.crisisExpert.unlocked && gameState.records.disasterCount >= CONFIG.achievementCrisisExpertCount) {
+                gameState.achievements.crisisExpert.unlocked = true;
+                CONFIG.costRepairStation *= (1 - CONFIG.achievementCrisisExpertDiscount);
+                setSystemMsg(`🏆 成就解锁：危机处理专家！维修站成本-20%`, "success", true);
+                createExplosion(0, 0, '#ff8800', 40);
+            }
+        }
+
+        function checkTechUnlock() {
+            // Smart Grid: Total earnings >= 100,000
+            if (!gameState.unlockedTech.includes('smartGrid') && gameState.records.totalEarnings >= CONFIG.techSmartGridCost) {
+                gameState.unlockedTech.push('smartGrid');
+                setSystemMsg(`🔬 科技解锁：智能电网！过载风险-15%`, "success", true);
+                createExplosion(0, 0, '#00ff00', 40);
+            }
+
+            // Nuclear Tech: 5 nuclear plants
+            if (!gameState.unlockedTech.includes('nuclearTech')) {
+                const nuclearCount = sources.filter(s => s.variant === 'nuclear').length;
+                if (nuclearCount >= CONFIG.techNuclearTechRequirement) {
+                    gameState.unlockedTech.push('nuclearTech');
+                    CONFIG.nuclearFailureChance = CONFIG.techNuclearTechFailureRate;
+                    setSystemMsg(`🔬 科技解锁：核技术升级！故障率降至2%/分钟`, "success", true);
+                    createExplosion(0, 0, '#00ff66', 40);
+                }
+            }
+        }
+
+        function runSystemCheck() {
+            const issues = [];
+
+            // Check for overload risk links
+            links.forEach(link => {
+                if (link.active) {
+                    const limit = link.maxLoad || CONFIG.baseWireLoad;
+                    const loadRatio = link.load / limit;
+                    if (loadRatio > 0.8) {
+                        issues.push({
+                            type: 'overload',
+                            item: link,
+                            message: `链路过载风险 (${(loadRatio * 100).toFixed(0)}%)`,
+                            severity: loadRatio > 0.95 ? 'critical' : 'warning'
+                        });
+                    }
+                }
+            });
+
+            // Check for low efficiency sources
+            sources.forEach(source => {
+                const effectiveCapacity = getEffectiveCapacity(source);
+                if (effectiveCapacity > 0 && source.load > effectiveCapacity * 0.9) {
+                    issues.push({
+                        type: 'overload',
+                        item: source,
+                        message: `${source.variant === 'plant' ? '电厂' : source.variant === 'nuclear' ? '核电站' : source.variant === 'wind' ? '风力电站' : source.variant === 'solar' ? '太阳能电站' : '设施'}过载`,
+                        severity: source.load > effectiveCapacity ? 'critical' : 'warning'
+                    });
+                }
+            });
+
+            // Check for nuclear cooling issues
+            sources.filter(s => s.variant === 'nuclear').forEach(nuclear => {
+                if (!nuclear.coolingSatisfied) {
+                    issues.push({
+                        type: 'cooling',
+                        item: nuclear,
+                        message: '核电站冷却不足',
+                        severity: 'critical'
+                    });
+                }
+            });
+
+            // Check for damaged infrastructure
+            pylons.filter(p => p.isDamaged).forEach(pylon => {
+                issues.push({
+                    type: 'damaged',
+                    item: pylon,
+                    message: '电塔受损',
+                    severity: 'critical'
+                });
+            });
+
+            links.filter(l => l.isDamaged).forEach(link => {
+                issues.push({
+                    type: 'damaged',
+                    item: link,
+                    message: '链路损坏',
+                    severity: 'critical'
+                });
+            });
+
+            // Check for nuclear repair needs
+            sources.filter(s => s.variant === 'nuclear' && s.needsRepair).forEach(nuclear => {
+                issues.push({
+                    type: 'repair',
+                    item: nuclear,
+                    message: '核电站需要维修',
+                    severity: 'critical'
+                });
+            });
+
+            // Store issues for highlighting
+            gameState.highlightedIssues = issues;
+
+            // Report results
+            if (issues.length === 0) {
+                setSystemMsg("✅ 系统检测完成：未发现问题", "success", true);
+            } else {
+                const criticalCount = issues.filter(i => i.severity === 'critical').length;
+                const warningCount = issues.filter(i => i.severity === 'warning').length;
+                setSystemMsg(`⚠️ 系统检测完成：发现 ${issues.length} 个问题 (${criticalCount} 个严重, ${warningCount} 个警告)`, "warning", true);
+            }
+
+            // Clear highlighting after 5 seconds
+            setTimeout(() => {
+                gameState.highlightedIssues = [];
+            }, 5000);
+        }
+
+        function updateRecords() {
+            // Update max population
+            if (houses.length > gameState.records.maxPopulation) {
+                gameState.records.maxPopulation = houses.length;
+            }
+
+            // Update current uptime
+            if (gameState.lastFailureTime === 0) {
+                gameState.records.currentUptime = gameTime;
+            } else {
+                gameState.records.currentUptime = gameTime - gameState.lastFailureTime;
+            }
+
+            // Update longest uptime
+            if (gameState.records.currentUptime > gameState.records.longestUptime) {
+                gameState.records.longestUptime = gameState.records.currentUptime;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('neonGridRecords', JSON.stringify(gameState.records));
+        }
+
+        function showLeaderboard() {
+            const records = JSON.parse(localStorage.getItem('neonGridRecords')) || {
+                maxPopulation: 0,
+                longestUptime: 0,
+                totalEarnings: 0,
+                disasterCount: 0
+            };
+
+            const modal = document.createElement('div');
+            modal.className = 'leaderboard-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h2>🏆 排行榜</h2>
+                    <div class="record-row">
+                        <span class="record-label">最高人口</span>
+                        <span class="record-value">${records.maxPopulation}</span>
+                    </div>
+                    <div class="record-row">
+                        <span class="record-label">最长无故障运行</span>
+                        <span class="record-value">${formatTime(records.longestUptime)}</span>
+                    </div>
+                    <div class="record-row">
+                        <span class="record-label">当前无故障运行</span>
+                        <span class="record-value">${formatTime(gameState.records.currentUptime)}</span>
+                    </div>
+                    <div class="record-row">
+                        <span class="record-label">应对自然灾害</span>
+                        <span class="record-value">${records.disasterCount} 次</span>
+                    </div>
+                    <button class="close-btn" onclick="this.closest('.leaderboard-modal').remove()">关闭</button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function takeGridSnapshot() {
+            // Create temporary canvas for snapshot
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Draw game画面
+            tempCtx.drawImage(canvas, 0, 0);
+
+            // Add statistics overlay
+            tempCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            tempCtx.fillRect(10, 10, 300, 140);
+            tempCtx.strokeStyle = '#00ffff';
+            tempCtx.lineWidth = 2;
+            tempCtx.strokeRect(10, 10, 300, 140);
+
+            tempCtx.fillStyle = '#00ff00';
+            tempCtx.font = 'bold 18px Arial';
+            tempCtx.fillText('Neon Grid 电力网格', 25, 40);
+
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.font = '14px Arial';
+            tempCtx.fillText(`人口: ${houses.length}`, 25, 65);
+            tempCtx.fillText(`资金: $${money.toFixed(2)}`, 25, 85);
+            tempCtx.fillText(`秒赚: $${currentNetIncome.toFixed(2)}/s`, 25, 105);
+            tempCtx.fillText(`覆盖率: ${Math.floor(calculateCoverage())}%`, 25, 125);
+
+            // Download snapshot
+            const link = document.createElement('a');
+            link.download = `neon-grid-snapshot-${Date.now()}.png`;
+            link.href = tempCanvas.toDataURL();
+            link.click();
+
+            setSystemMsg("电网快照已保存！", "success");
+        }
+
+        function upgradeNuclearMaintenance(nuclear) {
+            if (money >= CONFIG.nuclearMaintenanceUpgradeCost) {
+                money -= CONFIG.nuclearMaintenanceUpgradeCost;
+                nuclear.maintenanceMode = true;
+                nuclear.maintenanceEndTime = gameState.gameTime + CONFIG.nuclearMaintenanceDuration;
+                nuclear.maintenanceCostMultiplier = 2.0;
+                setSystemMsg("核电站维护已启动，容量衰减暂停1小时", "success");
+                createExplosion(nuclear.x, nuclear.y, '#00ff66', 25);
+            } else {
+                setSystemMsg("资金不足，需要$" + CONFIG.nuclearMaintenanceUpgradeCost, "warning");
+            }
+        }
+
+        function getEffectiveCapacity(source) {
+            let effectiveCapacity = source.capacity;
+
+            // Apply wind speed multiplier
+            if (source.variant === 'wind' && source.windSpeedMultiplier) {
+                effectiveCapacity *= source.windSpeedMultiplier;
+            }
+
+            // Apply solar efficiency based on time of day
+            if (source.variant === 'solar') {
+                const hour = gameState.gameDate;
+                if (hour >= CONFIG.solarDayStart && hour < CONFIG.solarDayEnd) {
+                    // Daytime: 100% efficiency
+                    effectiveCapacity *= 1.0;
+                } else if ((hour >= CONFIG.solarDayStart - CONFIG.solarDawnDuration && hour < CONFIG.solarDayStart) ||
+                           (hour >= CONFIG.solarDayEnd && hour < CONFIG.solarDayEnd + CONFIG.solarDuskDuration)) {
+                    // Dawn/Dusk: 50% efficiency
+                    effectiveCapacity *= 0.5;
+                } else {
+                    // Nighttime: 0% efficiency (or 20% if upgraded)
+                    if (source.hasStorageUpgrade) {
+                        effectiveCapacity *= CONFIG.solarStorageEfficiency;
+                    } else {
+                        effectiveCapacity = 0;
+                    }
+                }
+            }
+
+            // Apply nuclear maintenance mode
+            if (source.variant === 'nuclear' && source.maintenanceMode) {
+                effectiveCapacity = 0; // No power during maintenance
+            }
+
+            // Apply under-maintenance status
+            if (source.underMaintenance) {
+                effectiveCapacity = 0; // No power during maintenance
+            }
+
+            // Apply efficiency bonus (from maintenance completion)
+            if (source.efficiencyBonus) {
+                effectiveCapacity *= source.efficiencyBonus;
+            }
+
+            return effectiveCapacity;
+        }
+
         function updatePowerGrid(silent = false) {
             const prevPowered = new Set();
             pylons.forEach(p => { if(p.powered) prevPowered.add(p); p.powered = false; });
@@ -2168,8 +3222,14 @@
                 let u = currentObj.node;
  
                 for (let link of links) {
+                    // Skip damaged links
+                    if (link.isDamaged) continue;
+
                     let v = (link.from === u) ? link.to : (link.to === u ? link.from : null);
                     if (v) {
+                        // Skip damaged towers
+                        if (v.type === 'pylon' && v.isDamaged) continue;
+
                         if (!visited.has(v)) {
                             visited.set(v, { depth: currentObj.depth + 1, parentLink: link });
                             link.active = true;
@@ -2200,14 +3260,19 @@
                         nodeLoad = baseLoad;
                     }
                     else if (node.type === 'battery') nodeLoad = node.targetLoad || 0;
-                    
+
                     // NEW: Peak hour increases all loads
                     if (isPeakHour) {
                         nodeLoad *= CONFIG.peakHourMultiplier;
                     }
-                     
+
                     let totalLoad = nodeLoad + (node.accumulatedLoad || 0);
-                     
+
+                    // Apply transmission loss (load increases due to loss)
+                    if (feedLink.loss > 0) {
+                        totalLoad = totalLoad / (1 - feedLink.loss); // Increase load to compensate for loss
+                    }
+
                     feedLink.load += totalLoad;
                     let parentNode = (feedLink.from === node) ? feedLink.to : feedLink.from;
                     if (parentNode.type === 'source' || parentNode.type === 'tower') parentNode.load += totalLoad;
@@ -2235,7 +3300,12 @@
                     const dt = (timestamp - lastTime) * timeScale;
                     lastTime = timestamp;
                     gameTime += dt;
-        
+
+                    // --- Game Time System (24-hour cycle) ---
+                    gameState.gameTime = gameTime;
+                    gameState.gameDate = (gameState.gameDate + dt / 60000) % 24; // 每分钟推进1分钟游戏时间
+                    gameState.gameDays = Math.floor(gameTime / (24 * 60 * 1000));
+
                     updateViewBounds();
         
                     if (currentScale > CONFIG.minScale) {
@@ -2248,9 +3318,15 @@
                     if (gameOver) return;
         
                     // --- REPLAY SYSTEM UPDATE ---
-                    if (gameTime - lastSnapshotTime > 1000) { 
+                    if (gameTime - lastSnapshotTime > 1000) {
                         takeSnapshot();
                         lastSnapshotTime = gameTime;
+                        // Update records every second
+                        updateRecords();
+                        // Check achievements every second
+                        checkAchievements();
+                        // Check tech unlocks every second
+                        checkTechUnlock();
                     }
         
                     // --- NEW: Peak Hour System ---
@@ -2269,11 +3345,126 @@
                         nuclearCheckTime = gameTime;
                         sources.forEach(s => {
                             if (s.variant === 'nuclear') {
-                                // Random failure chance
-                                if (Math.random() < CONFIG.nuclearFailureChance) {
-                                    s.needsRepair = true;
-                                    setSystemMsg("⚠️ 核电站故障！需要维修！", "warning", true);
+                                // Check cooling system
+                                const connectedBatteries = links
+                                    .filter(l => l.from === s.id || l.to === s.id)
+                                    .map(l => {
+                                        const batteryId = l.from === s.id ? l.to : l.from;
+                                        return batteries.find(b => b.id === batteryId);
+                                    })
+                                    .filter(b => b !== undefined && b.powered)
+                                    .length;
+
+                                s.coolingBatteries = connectedBatteries;
+                                s.coolingSatisfied = connectedBatteries >= CONFIG.nuclearCoolingBatteryCount;
+
+                                if (!s.coolingSatisfied) {
+                                    s.failureChance = CONFIG.nuclearCoolingFailureRate;
+                                } else {
+                                    s.failureChance = CONFIG.nuclearFailureChance;
                                 }
+
+                                // Random failure chance
+                                if (Math.random() < s.failureChance) {
+                                    s.needsRepair = true;
+                                    const reason = !s.coolingSatisfied ? "冷却不足" : "系统故障";
+                                    setSystemMsg(`⚠️ 核电站${reason}！需要维修！`, "warning", true);
+                                }
+                            }
+                        });
+                    }
+
+                    // --- NEW: Wind Power Speed Events ---
+                    if (gameTime - nuclearCheckTime > 60000) { // Check every minute
+                        sources.filter(s => s.variant === 'wind').forEach(wind => {
+                            if (Math.random() < CONFIG.windSpeedEventChance) { // 10% chance
+                                const isNight = gameState.gameDate >= 20 || gameState.gameDate < 6;
+                                if (isNight) {
+                                    wind.windSpeedMultiplier = 1.0; // Night is stable
+                                } else {
+                                    const event = Math.random() < 0.5 ? 'high' : 'low';
+                                    wind.windSpeedMultiplier = event === 'high' ? 1.8 : 0.5;
+                                    setSystemMsg(`风速${event === 'high' ? '提升' : '降低'}！效率${event === 'high' ? '+80%' : '-50%'}`, event === 'high' ? 'success' : 'warning', true);
+                                    createExplosion(wind.x, wind.y, event === 'high' ? '#88ffff' : '#ff8888', 15);
+                                }
+                            }
+                        });
+                    }
+
+                    // --- NEW: Low Demand Event ---
+                    const population = houses.length;
+                    const isPeakHour = gameState.gameDate >= 18 && gameState.gameDate <= 22;
+                    if (population < 200 && !isPeakHour && gameState.activeEvents.length === 0) {
+                        if (Math.random() < CONFIG.lowDemandEventChance) { // 30% chance
+                            gameState.activeEvents.push({
+                                type: 'lowDemand',
+                                startTime: gameState.gameTime,
+                                duration: 300000, // 5 minutes
+                                batteryChargeBonus: 1.2
+                            });
+                            setSystemMsg("用电低谷期！电池充电效率+20%", "info", true);
+                            createExplosion(0, 0, '#00ffaa', 30);
+                        }
+                    }
+
+                    // --- Clean up expired events ---
+                    gameState.activeEvents = gameState.activeEvents.filter(event => {
+                        if (gameState.gameTime - event.startTime > event.duration) {
+                            if (event.type === 'lowDemand') {
+                                setSystemMsg("用电低谷期结束", "info", true);
+                            }
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    // --- NEW: Maintenance Event ---
+                    sources.forEach(source => {
+                        if (source.underMaintenance) {
+                            // Check if maintenance is complete
+                            if (gameTime >= source.maintenanceEndTime) {
+                                source.underMaintenance = false;
+                                source.efficiencyBonus = source.efficiencyBonus || 1.1; // 10% efficiency boost
+                                setSystemMsg(`${source.variant === 'plant' ? '电厂' : source.variant === 'wind' ? '风力电站' : source.variant === 'solar' ? '太阳能电站' : '核电站'}检修完成，效率+10%`, "success", true);
+                                createExplosion(source.x, source.y, '#00ff66', 20);
+                            }
+                        } else if (source.builtTime && !source.maintenanceMode) {
+                            const runningTime = gameState.gameTime - source.builtTime;
+                            if (runningTime > 3600000) { // Running more than 1 hour
+                                if (Math.random() < CONFIG.maintenanceEventChance) { // 5% chance per minute
+                                    source.underMaintenance = true;
+                                    source.maintenanceEndTime = gameState.gameTime + 30000; // 30 seconds
+                                    setSystemMsg(`${source.variant === 'plant' ? '电厂' : source.variant === 'wind' ? '风力电站' : source.variant === 'solar' ? '太阳能电站' : '核电站'}需要检修，临时关闭30秒`, "warning", true);
+                                    createExplosion(source.x, source.y, '#ffaa00', 15);
+                                }
+                            }
+                        }
+                    });
+
+                    // --- NEW: Natural Disaster Event ---
+                    if (population > CONFIG.disasterPopThreshold && gameState.activeEvents.length === 0) {
+                        if (Math.random() < CONFIG.disasterEventChance) { // 1% chance per minute
+                            const disasterType = Math.random() < 0.5 ? 'storm' : 'typhoon';
+                            const disasterName = disasterType === 'storm' ? '暴雨' : '台风';
+                            gameState.activeEvents.push({
+                                type: disasterType,
+                                startTime: gameState.gameTime,
+                                duration: 600000, // 10 minutes
+                                linkDamageChance: 0.3
+                            });
+                            setSystemMsg(`灾害预警：${disasterName}来袭！加固电塔！`, "error", true);
+                            createExplosion(0, 0, '#ff3333', 40);
+                            gameState.records.disasterCount++;
+                        }
+                    }
+
+                    // Handle disaster damage
+                    const disaster = gameState.activeEvents.find(e => e.type === 'storm' || e.type === 'typhoon');
+                    if (disaster) {
+                        pylons.forEach(pylon => {
+                            if (Math.random() < disaster.linkDamageChance * 0.01) { // Check every frame
+                                pylon.isDamaged = true;
+                                createExplosion(pylon.x, pylon.y, '#ff8800', 15);
                             }
                         });
                     }
@@ -2282,6 +3473,10 @@
                         nuclearDecayCheckTime = gameTime;
                         sources.forEach(s => {
                             if (s.variant === 'nuclear') {
+                                // Skip decay if in maintenance mode
+                                if (s.maintenanceMode) {
+                                    return;
+                                }
                                 s.capacity = Math.max(10, s.capacity - CONFIG.nuclearDecayRate);
                                 if (s.capacity < CONFIG.nuclearCapacity * 0.5) {
                                     setSystemMsg("⚠️ 核电站性能下降，需要维护", "warning", true);
@@ -2289,6 +3484,24 @@
                             }
                         });
                     }
+
+                    // --- NEW: Nuclear Maintenance End Check ---
+                    sources.forEach(s => {
+                        if (s.variant === 'nuclear' && s.maintenanceMode) {
+                            if (gameTime >= s.maintenanceEndTime) {
+                                s.maintenanceMode = false;
+                                s.maintenanceCostMultiplier = 1.0;
+                                setSystemMsg("核电站维护完成，恢复正常运行", "success");
+                                createExplosion(s.x, s.y, '#00ff66', 20);
+                            }
+                        }
+                    });
+
+                    // --- NEW: Achievement System ---
+                    checkAchievements();
+
+                    // --- NEW: Tech Tree System ---
+                    checkTechUnlock();
         
                     // --- 1. Dynamic Load Update (Commercial) ---
                     houses.forEach(h => {
@@ -2301,12 +3514,29 @@
                     // --- 2. Battery Control Logic ---
                     let gridStressed = false;
                     let gridRelaxed = true;
-                     
+
+                    // Update cascade cooldowns
+                    links.forEach(l => {
+                        if (l.cascadeCooldown > 0) {
+                            l.cascadeCooldown -= dt;
+                            if (l.cascadeCooldown < 0) l.cascadeCooldown = 0;
+                        }
+                    });
+
+                    // Calculate energy storage station bonuses
+                    let capacityMultiplier = 1.0;
+                    let chargeRateMultiplier = 1.0;
+                    sources.filter(s => s.variant === 'energystorage').forEach(station => {
+                        capacityMultiplier = station.capacityMultiplier;
+                        chargeRateMultiplier = station.chargeRateMultiplier;
+                    });
+
                     sources.forEach(s => {
-                        if (s.heat > 0 || s.load > s.capacity * 0.95) {
+                        const effectiveCapacity = getEffectiveCapacity(s);
+                        if (s.heat > 0 || s.load > effectiveCapacity * 0.95) {
                             gridStressed = true;
                             gridRelaxed = false;
-                        } else if (s.load > s.capacity * 0.8) {
+                        } else if (s.load > effectiveCapacity * 0.8) {
                             gridRelaxed = false;
                         }
                     });
@@ -2316,20 +3546,29 @@
                             b.targetLoad = 0; b.currentOp = 'idle';
                             return;
                         }
-        
+
+                        // Apply energy storage station bonuses
+                        const actualMaxEnergy = b.maxEnergy * capacityMultiplier;
+                        const actualChargeRate = CONFIG.batteryChargeRate * chargeRateMultiplier;
+                        const actualDischargeRate = CONFIG.batteryDischargeRate * chargeRateMultiplier;
+
                         if (gridStressed && b.energy > 0) {
                             b.currentOp = 'discharge';
-                            b.targetLoad = -CONFIG.batteryDischargeRate;
-                            b.energy -= (CONFIG.batteryDischargeRate * 0.05 * timeScale); 
+                            b.targetLoad = -actualDischargeRate;
+                            b.energy -= (actualDischargeRate * 0.05 * timeScale);
                             if (b.energy < 0) b.energy = 0;
                             if (Math.random() < 0.1 * timeScale) {
                                 particles.push({ x: b.x, y: b.y, vx: 0, vy: -2, life: 0.4, decay: 0.05, color: '#ffff00', size: 2 });
                             }
-                        } else if (gridRelaxed && b.energy < b.maxEnergy) {
+                        } else if (gridRelaxed && b.energy < actualMaxEnergy) {
                             b.currentOp = 'charge';
-                            b.targetLoad = CONFIG.batteryChargeRate;
-                            b.energy += (CONFIG.batteryChargeRate * 0.05 * timeScale);
-                            if (b.energy > b.maxEnergy) b.energy = b.maxEnergy;
+                            // Check for low demand event bonus
+                            const lowDemandEvent = gameState.activeEvents.find(e => e.type === 'lowDemand');
+                            const chargeBonus = lowDemandEvent ? lowDemandEvent.batteryChargeBonus : 1.0;
+
+                            b.targetLoad = actualChargeRate * chargeBonus;
+                            b.energy += (actualChargeRate * chargeBonus * 0.05 * timeScale);
+                            if (b.energy > actualMaxEnergy) b.energy = actualMaxEnergy;
                         } else {
                             b.currentOp = 'idle';
                             b.targetLoad = 0;
@@ -2340,40 +3579,68 @@
                     if (gameTime - lastIncomeGameTime > CONFIG.economyTickRate) {
                         const totalPop = houses.length;
                         const coverage = calculateCoverage();
-                        
+
                         let income = CONFIG.baseSubsidy;
-                        
+
                         // Subsidy scaling
                         if (money < CONFIG.subsidyThreshold) {
                             income *= 2; // Double subsidy for early game
                         } else if (totalPop > CONFIG.subsidyCancelPop) {
                             income = 0; // No subsidy in late game
                         }
-                        
+
+                        // Clean energy subsidy
+                        const cleanEnergySources = sources.filter(s =>
+                            ['wind', 'solar'].includes(s.variant)
+                        ).length;
+                        const totalSources = sources.length;
+                        const cleanEnergyRatio = totalSources > 0 ? cleanEnergySources / totalSources : 0;
+
+                        if (cleanEnergyRatio >= CONFIG.cleanEnergySubsidyThreshold &&
+                            gameState.gameDays > gameState.lastSubsidyDay) {
+                            gameState.lastSubsidyDay = gameState.gameDays;
+                            const dailyIncome = currentNetIncome * 60 * 24; // Daily income estimate
+                            const subsidy = Math.abs(dailyIncome) * 0.5; // 50% of daily income
+                            money += subsidy;
+                            setSystemMsg(`政策补贴：清洁能源占比${(cleanEnergyRatio * 100).toFixed(0)}%，获得 $${subsidy.toFixed(2)}`, "success", true);
+                        }
+
                         houses.forEach(h => {
                             if (h.powered) {
                                 let val = CONFIG.incomePerHouse;
                                 if (h.type === 'factory') val = CONFIG.incomePerFactory;
                                 if (h.type === 'commercial') val = CONFIG.incomePerComm;
-                                
+
                                 // Tiered pricing bonus
                                 if (coverage >= 100) val *= 1.2;
                                 else if (coverage < 50) val *= 0.5;
-                                
+
                                 income += val;
                             }
                         });
                          
                         let upkeep = 0;
                         const plantCount = sources.filter(s => s.variant !== 'nuclear' && s.variant !== 'wind' && s.variant !== 'solar').length;
+
+                        // Calculate maintenance reduction from repair stations
+                        let maintenanceReduction = 0;
+                        sources.filter(s => s.variant === 'repair').forEach(station => {
+                            maintenanceReduction += station.maintenanceReduction;
+                        });
+                        // Cap reduction at 50%
+                        maintenanceReduction = Math.min(0.5, maintenanceReduction);
+
                         sources.forEach((s, index) => {
                             let plantUpkeep = (s.variant === 'nuclear' ? CONFIG.nuclearUpkeep : (s.upkeep || CONFIG.upkeepPerPlant));
-                            
+
+                            // Apply maintenance reduction
+                            plantUpkeep *= (1 - maintenanceReduction);
+
                             // Maintenance scaling
                             if (plantCount > CONFIG.maintenanceScaleThreshold && index >= CONFIG.maintenanceScaleThreshold - 1) {
                                 plantUpkeep *= CONFIG.maintenanceScaleMultiplier;
                             }
-                            
+
                             upkeep += plantUpkeep;
                         });
                          
@@ -2381,6 +3648,11 @@
                         currentNetIncome = income;
                         money += currentNetIncome;
                         lastIncomeGameTime = gameTime;
+
+                        // Update total earnings for tech tree
+                        if (currentNetIncome > 0) {
+                            gameState.records.totalEarnings += currentNetIncome;
+                        }
                     }
         
                     // --- SPAWNING LOGIC (Fixed Intervals) ---
@@ -2439,16 +3711,17 @@
                     isCriticalState = false;
         
                     sources.forEach(s => {
+                        const effectiveCapacity = getEffectiveCapacity(s);
                         s.displayLoad = (s.displayLoad || 0) + (s.load - (s.displayLoad || 0)) * 0.1;
-                        s.rotation = (s.rotation || 0) + (0.01 + (s.displayLoad / s.capacity) * 0.05) * timeScale;
-        
-                        if (s.load > s.capacity) {
+                        s.rotation = (s.rotation || 0) + (0.01 + (s.displayLoad / effectiveCapacity) * 0.05) * timeScale;
+
+                        if (s.load > effectiveCapacity) {
                             s.heat += CONFIG.overheatSpeed * 2 * timeScale;
                             if (timeScale > 0 && Math.random() < 0.1) particles.push({ x: s.x, y: s.y, vx: 0, vy: -2, life: 0.6, decay: 0.05, color: '#ff0000', size: 2 });
                         } else if (s.heat > 0) s.heat -= 0.5 * timeScale;
-        
+
                         if (s.heat > 80) isCriticalState = true;
-        
+
                         if (s.heat >= CONFIG.maxHeat) {
                             triggerGameOver("发电机核心熔毁。");
                         }
@@ -2472,6 +3745,33 @@
                     });
         
                     if (brokenLinks.length > 0) {
+                        // Check for cascade failures
+                        brokenLinks.forEach(brokenLink => {
+                            if (Math.random() < CONFIG.wireCascadeChance) {
+                                // Find adjacent links
+                                const adjacentLinks = links.filter(l => {
+                                    return (l.from === brokenLink.from || l.to === brokenLink.to ||
+                                            l.from === brokenLink.to || l.to === brokenLink.from) &&
+                                           l !== brokenLink &&
+                                           !brokenLinks.includes(l) &&
+                                           l.cascadeCooldown <= 0;
+                                });
+
+                                adjacentLinks.forEach(adjLink => {
+                                    // Trigger cascade overload
+                                    adjLink.heat += CONFIG.maxHeat * 0.7; // Immediate overload
+                                    adjLink.cascadeCooldown = 5000; // 5 second cooldown
+                                    createExplosion((adjLink.from.x + adjLink.to.x) / 2,
+                                                   (adjLink.from.y + adjLink.to.y) / 2,
+                                                   '#ff8800', 15);
+                                });
+
+                                if (adjacentLinks.length > 0) {
+                                    setSystemMsg("链路过载连锁反应！", "error");
+                                }
+                            }
+                        });
+
                         links = links.filter(l => !brokenLinks.includes(l));
                         updatePowerGrid();
                     }
@@ -2570,9 +3870,36 @@
             const total = houses.length;
             const powered = houses.filter(h => h.powered).length;
             const pct = total === 0 ? 100 : Math.floor((powered/total)*100);
-            coverageEl.innerText = pct + '%'; 
+            coverageEl.innerText = pct + '%';
             coverageEl.style.color = pct < 50 ? '#ff3333' : '#00ffff';
             scaleEl.innerText = `${total}`;
+
+            // Update game time display
+            const timeDisplay = document.getElementById('time-display');
+            if (timeDisplay) {
+                const hour = Math.floor(gameState.gameDate);
+                const minute = Math.floor((gameState.gameDate - hour) * 60);
+                const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+
+                // Determine time of day icon
+                let timeIcon = '🌙';
+                if (hour >= 6 && hour < 12) timeIcon = '🌅';
+                else if (hour >= 12 && hour < 18) timeIcon = '☀️';
+                else if (hour >= 18 && hour < 20) timeIcon = '🌇';
+
+                timeDisplay.innerText = `${timeIcon} ${timeStr}`;
+
+                // Color based on time of day
+                if (hour >= 20 || hour < 6) {
+                    timeDisplay.style.color = '#88aaff'; // Night
+                } else if (hour >= 6 && hour < 8) {
+                    timeDisplay.style.color = '#ffcc88'; // Dawn
+                } else if (hour >= 8 && hour < 17) {
+                    timeDisplay.style.color = '#ffdd44'; // Day
+                } else if (hour >= 17 && hour < 20) {
+                    timeDisplay.style.color = '#ff8844'; // Dusk
+                }
+            }
         }
  
         // --- Optimized Rendering ---
@@ -2735,15 +4062,24 @@
  
             // --- 5. 建筑预览 ---
             if (placementMode && input.worldX !== undefined) {
-                const isValid = isPositionClear(input.worldX, input.worldY, 60);
+                let isValid = isPositionClear(input.worldX, input.worldY, 60);
+
+                // Check wind placement restriction
+                if (placementMode === 'wind' && CONFIG.windEdgeOnly) {
+                    isValid = isValid && isWindPlacementValid(input.worldX, input.worldY);
+                }
+
                 let cost = 0;
                 if (placementMode === 'plant') cost = CONFIG.costPlant;
                 else if (placementMode === 'nuclear') cost = CONFIG.costNuclear;
                 else if (placementMode === 'battery') cost = CONFIG.costBattery;
- 
+                else if (placementMode === 'wind') cost = CONFIG.costWind;
+                else if (placementMode === 'solar') cost = CONFIG.costSolar;
+                else if (placementMode === 'tower') cost = 100;
+
                 const canAfford = money >= cost;
                 const isGood = isValid && canAfford;
-                 
+
                 ctx.globalAlpha = 0.6;
                 if (placementMode === 'battery') {
                      ctx.fillStyle = isGood ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
@@ -2754,17 +4090,51 @@
                     ctx.fillStyle = isGood ? (placementMode === 'nuclear' ? 'rgba(0, 255, 100, 0.5)' : 'rgba(0, 255, 0, 0.5)') : 'rgba(255, 0, 0, 0.5)';
                     ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
                 }
-                 
-                // 显示放置范围
-                ctx.strokeStyle = isGood ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 0, 0, 0.3)';
-                ctx.lineWidth = 1;
+
+                // 显示放置范围和覆盖区域
+                ctx.globalAlpha = 0.3;
                 ctx.setLineDash([5, 5]);
+
+                // Placement buffer (minimum distance)
+                ctx.strokeStyle = isGood ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.arc(input.worldX, input.worldY, 60, 0, Math.PI * 2);
                 ctx.stroke();
+
+                // Coverage radius based on building type
+                let coverageRadius = 0;
+                let coverageColor = '#00ffff';
+
+                if (placementMode === 'plant' || placementMode === 'nuclear' || placementMode === 'wind' || placementMode === 'solar') {
+                    coverageRadius = 200; // Power source coverage
+                    coverageColor = '#00ff00';
+                } else if (placementMode === 'battery') {
+                    coverageRadius = 150; // Battery influence range
+                    coverageColor = '#ffff00';
+                } else if (placementMode === 'tower') {
+                    coverageRadius = 100; // Tower range
+                    coverageColor = '#ff00ff';
+                }
+
+                if (coverageRadius > 0) {
+                    ctx.strokeStyle = isGood ? coverageColor : 'rgba(255, 0, 0, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(input.worldX, input.worldY, coverageRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
                 ctx.setLineDash([]);
-                 
                 ctx.globalAlpha = 1;
+
+                // Show coverage text
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                if (coverageRadius > 0) {
+                    ctx.fillText('覆盖范围', input.worldX, input.worldY + coverageRadius + 15);
+                }
             }
  
             // --- 6. Entities (Glow) ---
@@ -3129,11 +4499,13 @@
         }
  
         // 启动游戏
-        resize(); 
-        restartGame();
+        resize();
         setupBuildingButtons();
         updateFullscreenButton();
         requestAnimationFrame(renderLoop);
+
+        // 显示难度选择弹窗
+        // Note: Game will start when user selects a difficulty
          
         // 显示初始帮助
         setTimeout(() => {
