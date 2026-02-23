@@ -1676,6 +1676,13 @@
                     lastFactorySpawnTime: lastFactorySpawnTime,
                     lastCommSpawnTime: lastCommSpawnTime,
                     lastIncomeGameTime: lastIncomeGameTime,
+                    // 保存游戏状态（成就、科技解锁、记录）
+                    gameState: {
+                        achievements: gameState.achievements,
+                        unlockedTech: gameState.unlockedTech,
+                        records: gameState.records,
+                        currentUptime: gameState.records.currentUptime
+                    },
                     // 保存所有实体
                     sources: sources.map(s => ({
                         x: s.x, y: s.y, radius: s.radius, type: s.type,
@@ -1760,6 +1767,13 @@
                             lastFactorySpawnTime = saveData.lastFactorySpawnTime || 0;
                             lastCommSpawnTime = saveData.lastCommSpawnTime || 0;
                             lastIncomeGameTime = saveData.lastIncomeGameTime || 0;
+                            
+                            // 恢复游戏状态（成就、科技解锁、记录）
+                            if (saveData.gameState) {
+                                gameState.achievements = saveData.gameState.achievements || gameState.achievements;
+                                gameState.unlockedTech = saveData.gameState.unlockedTech || [];
+                                gameState.records = saveData.gameState.records || gameState.records;
+                            }
                             
                             // 恢复实体
                             sources = (saveData.sources || []).map(s => ({
@@ -2127,10 +2141,49 @@
                 menu.appendChild(maintainBtn);
             }
 
+            // Add upgrade button for link (if entity is a link)
+            if (entity.from && entity.to) { // It's a link
+                const upgradeLinkBtn = document.createElement('button');
+                upgradeLinkBtn.className = 'context-menu-btn';
+                const dist = Math.hypot(entity.from.x - entity.to.x, entity.from.y - entity.to.y);
+                const upgradeCost = Math.floor(dist * CONFIG.costWirePerUnit * CONFIG.costUpgradeMult);
+                if (entity.upgraded) {
+                    upgradeLinkBtn.innerHTML = `<span>✅ 已升级</span><span class="cost">高压线</span>`;
+                    upgradeLinkBtn.disabled = true;
+                } else {
+                    upgradeLinkBtn.innerHTML = `<span>⚡ 升级为高压线</span><span class="cost">$${upgradeCost}</span>`;
+                    upgradeLinkBtn.onclick = () => {
+                        if (money >= upgradeCost) {
+                            money -= upgradeCost;
+                            entity.upgraded = true;
+                            entity.maxLoad = CONFIG.upgradedWireLoad;
+                            createExplosion((entity.from.x + entity.to.x)/2, (entity.from.y + entity.to.y)/2, CONFIG.colors.wireUpgraded, 15);
+                            setSystemMsg(`电线已升级 (-$${upgradeCost})`, "success", true);
+                            updatePowerGrid();
+                        } else {
+                            setSystemMsg("资金不足", "warning", true);
+                        }
+                        menu.remove();
+                    };
+                }
+                menu.appendChild(upgradeLinkBtn);
+            }
+
             // Add demolish button
+            let demolishCost = 0;
+            if (entity.variant === 'plant') demolishCost = CONFIG.costPlant * CONFIG.refundRate;
+            else if (entity.variant === 'nuclear') demolishCost = CONFIG.costNuclear * CONFIG.refundRate;
+            else if (entity.variant === 'wind') demolishCost = CONFIG.costWind * CONFIG.refundRate;
+            else if (entity.variant === 'solar') demolishCost = CONFIG.costSolar * CONFIG.refundRate;
+            else if (entity.variant === 'repair') demolishCost = CONFIG.costRepairStation * CONFIG.refundRate;
+            else if (entity.variant === 'dispatch') demolishCost = CONFIG.costDispatchCenter * CONFIG.refundRate;
+            else if (entity.variant === 'energystorage') demolishCost = CONFIG.costEnergyStorage * CONFIG.refundRate;
+            else if (entity.type === 'battery') demolishCost = CONFIG.costBattery * CONFIG.refundRate;
+            else if (entity.type === 'pylon' || entity.variant === 'tower') demolishCost = CONFIG.costPylon * CONFIG.refundRate;
+
             const demolishBtn = document.createElement('button');
             demolishBtn.className = 'context-menu-btn danger';
-            demolishBtn.innerHTML = `<span>🗑️ 拆除</span><span class="cost">-$${Math.floor(CONFIG.costPlant * CONFIG.refundRate)}</span>`;
+            demolishBtn.innerHTML = `<span>🗑️ 拆除</span><span class="cost">+$${Math.floor(demolishCost)}</span>`;
             demolishBtn.onclick = () => {
                 demolishBuilding(entity);
                 menu.remove();
@@ -2409,11 +2462,20 @@
                 setSystemMsg(`电池已建造 (-$${cost})`, "success", true);
                 createExplosion(worldX, worldY, '#00ff00', 15);
             } else if (type === 'repair') {
-                // Maintenance Station - Check unlock condition first
+                // Maintenance Station - Price increases 30% if unlock condition not met
+                let actualCost = cost;
                 if (houses.length < CONFIG.repairStationUnlockPop) {
-                    createShockwave(worldX, worldY, '#ff3333');
-                    setSystemMsg(`维修站需要人口≥${CONFIG.repairStationUnlockPop}`, "warning", true);
-                    return;
+                    actualCost = Math.floor(cost * 1.3);
+                    if (money < actualCost) {
+                        createShockwave(worldX, worldY, '#ff3333');
+                        setSystemMsg(`资金不足（未满足解锁条件，价格上涨30%）`, "warning", true);
+                        return;
+                    }
+                    money -= actualCost;
+                    setSystemMsg(`维修站已建造（未满足解锁条件，价格+30%） (-$${actualCost})`, "warning", true);
+                } else {
+                    money -= actualCost;
+                    setSystemMsg(`维修站已建造！维护费-${CONFIG.repairStationMaintenanceReduction * 100}%`, "success", true);
                 }
                 sources.push({
                     x: worldX, y: worldY,
@@ -2425,14 +2487,22 @@
                     upkeep: 0,
                     maintenanceReduction: CONFIG.repairStationMaintenanceReduction
                 });
-                setSystemMsg(`维修站已建造！维护费-${CONFIG.repairStationMaintenanceReduction * 100}%`, "success", true);
                 createExplosion(worldX, worldY, '#00ff88', 20);
             } else if (type === 'dispatch') {
-                // Dispatch Center - Check unlock condition first
+                // Dispatch Center - Price increases 30% if unlock condition not met
+                let actualCost = cost;
                 if (houses.length < CONFIG.dispatchCenterUnlockPop) {
-                    createShockwave(worldX, worldY, '#ff3333');
-                    setSystemMsg(`调度中心需要人口≥${CONFIG.dispatchCenterUnlockPop}`, "warning", true);
-                    return;
+                    actualCost = Math.floor(cost * 1.3);
+                    if (money < actualCost) {
+                        createShockwave(worldX, worldY, '#ff3333');
+                        setSystemMsg(`资金不足（未满足解锁条件，价格上涨30%）`, "warning", true);
+                        return;
+                    }
+                    money -= actualCost;
+                    setSystemMsg(`调度中心已建造（未满足解锁条件，价格+30%） (-$${actualCost})`, "warning", true);
+                } else {
+                    money -= actualCost;
+                    setSystemMsg(`调度中心已建造！可切换供电优先级`, "success", true);
                 }
                 sources.push({
                     x: worldX, y: worldY,
@@ -2444,14 +2514,22 @@
                     upkeep: 0,
                     priorityMode: 'balanced' // balanced, residential, industrial
                 });
-                setSystemMsg(`调度中心已建造！可切换供电优先级`, "success", true);
                 createExplosion(worldX, worldY, '#ffaa00', 20);
             } else if (type === 'energystorage') {
-                // Energy Storage Station - Check unlock condition first
+                // Energy Storage Station - Price increases 30% if unlock condition not met
+                let actualCost = cost;
                 if (batteries.length < CONFIG.energyStorageUnlockBatteryCount) {
-                    createShockwave(worldX, worldY, '#ff3333');
-                    setSystemMsg(`储能站需要至少${CONFIG.energyStorageUnlockBatteryCount}个电池`, "warning", true);
-                    return;
+                    actualCost = Math.floor(cost * 1.3);
+                    if (money < actualCost) {
+                        createShockwave(worldX, worldY, '#ff3333');
+                        setSystemMsg(`资金不足（未满足解锁条件，价格上涨30%）`, "warning", true);
+                        return;
+                    }
+                    money -= actualCost;
+                    setSystemMsg(`储能站已建造（未满足解锁条件，价格+30%） (-$${actualCost})`, "warning", true);
+                } else {
+                    money -= actualCost;
+                    setSystemMsg(`储能站已建造！容量×${CONFIG.energyStorageCapacityMultiplier}，充放电速率×${CONFIG.energyStorageChargeRateMultiplier}`, "success", true);
                 }
                 sources.push({
                     x: worldX, y: worldY,
