@@ -1789,7 +1789,10 @@
         function selectDifficulty(mode) {
             gameState.mode = mode;
             const modal = document.getElementById('difficulty-modal');
-            modal.classList.add('hidden');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none'; // 强制隐藏
+            }
 
             // Apply difficulty modifiers
             switch(mode) {
@@ -4507,11 +4510,14 @@
         updateFullscreenButton();
         requestAnimationFrame(renderLoop);
 
-        // 显示难度选择弹窗
-        const difficultyModal = document.getElementById('difficulty-modal');
-        if (difficultyModal) {
-            difficultyModal.classList.remove('hidden');
-        }
+        // 显示难度选择弹窗（延迟执行确保DOM已加载）
+        setTimeout(() => {
+            const difficultyModal = document.getElementById('difficulty-modal');
+            if (difficultyModal) {
+                difficultyModal.classList.remove('hidden');
+                difficultyModal.style.display = 'flex'; // 确保显示
+            }
+        }, 100);
 
         // 显示初始帮助（在用户选择难度后）
         setTimeout(() => {
