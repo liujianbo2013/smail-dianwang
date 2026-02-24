@@ -18,7 +18,10 @@ smail-dianwang/
 ├── index.html      # 完整游戏代码（HTML/CSS/JS）
 ├── README.md       # 项目文档（中文）
 ├── CNAME          # 自定义域名配置
+<<<<<<< HEAD
 └── AGENTS.md      # 本文件
+=======
+>>>>>>> 58f98856c58b26be8dfc4930a9f6d310f05b80ed
 ```
 
 ## 核心功能模块
@@ -190,11 +193,14 @@ smail-dianwang/
 - 游戏历史快照可用于回放调试
 - `showHelpTip()` 函数用于显示调试信息
 
+<<<<<<< HEAD
 ## 待办功能（README.md 中列出）
 - [ ] 增加更多玩法
 - [ ] 增加存档保存、读取功能（已实现）
 - [ ] 增加分享功能（已实现）
 
+=======
+>>>>>>> 58f98856c58b26be8dfc4930a9f6d310f05b80ed
 ## 贡献指南
 
 ### 提交代码
@@ -213,4 +219,8 @@ smail-dianwang/
 
 - 项目主页：https://github.com/liujianbo2013/smail-dianwang
 - 游戏地址：https://smail-dianwang.jianbo.qzz.io
+<<<<<<< HEAD
 - 赞助链接：https://afdian.com/a/ljb13
+=======
+- 赞助链接：https://afdian.com/a/ljb13
+>>>>>>> 58f98856c58b26be8dfc4930a9f6d310f05b80ed
