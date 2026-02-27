@@ -1,0 +1,17 @@
+<svg width="380" height="180" viewBox="0 0 380 180" xmlns="http://www.w3.org/2000/svg">
+  <!-- 对话框背景（高度微调以适配无按钮布局） -->
+  <rect width="380" height="180" rx="8" fill="#ffffff" stroke="#f0ad4e" stroke-width="2"/>
+  
+  <!-- 标题栏 -->
+  <rect width="380" height="40" rx="8 8 0 0" fill="#f0ad4e"/>
+  <text x="20" y="26" font-family="Arial, sans-serif" font-size="16" fill="white">提示</text>
+  
+  <!-- 警告图标（感叹号） -->
+  <circle cx="50" cy="100" r="24" fill="#f0ad4e"/>
+  <path d="M50,85 L50,105 M50,112 L50,112" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- 提示文字 -->
+  <text x="95" y="105" font-family="Microsoft YaHei, sans-serif" font-size="16" fill="#333">
+    <tspan x="95">本存储库已停止更新</tspan>
+  </text>
+</svg>
